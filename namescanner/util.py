@@ -1,5 +1,6 @@
 import re
-from platforms import Platforms
+
+from namescanner.platforms import Platforms
 
 CONTENT_TYPE_JSON = "application/json"
 UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT = "Received unexpected content type {}. Wait before trying again"

@@ -1,14 +1,16 @@
 #! /usr/bin/env python
 import asyncio
-import aiohttp
 import argparse
-import time
-import colorama
 import sys
-import util
-from tqdm import tqdm
+import time
 from collections import defaultdict
-from platforms import Platforms
+
+import aiohttp
+import colorama
+import tqdm
+
+from namescanner import util
+from namescanner.platforms import Platforms
 
 BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
@@ -19,19 +21,18 @@ DIVIDER = "-"
 
 async def main():
     startTime = time.time()
-    colorama.init()
+    colorama.init(autoreset=True)
     sys.stdout.reconfigure(encoding='utf-8')
-    parser = argparse.ArgumentParser(description="Command-line interface for querying username availability on online platforms: GitHub, Instagram, Reddit, Twitter, Snapchat & Tumblr")
+    parser = argparse.ArgumentParser(description="Command-line interface for querying username availability on online platforms: " + ", ".join(p.name.capitalize() for p in Platforms))
     parser.add_argument("usernames", metavar="username", nargs="*",
                         help="list of usernames to query")
-    parser.add_argument("-r", "--restrict", metavar="platform", nargs="*", help="restrict list of platforms to query - "
-                                                                                "default: all platforms")
+    parser.add_argument("-r", "--restrict", metavar="platform", nargs="*", help="restrict list of platforms to query "
+                                                                                "(default: all platforms)")
     parser.add_argument("-i", "--input-file", metavar="filename.txt",
                         help="file from which to read in usernames, one per line")
     parser.add_argument("-c", "--cache-tokens", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram & Tumblr) "
                         "marginally increases runtime but halves number of requests")
-    parser.add_argument("-a", "--available-only", action="store_true",
-                        help="only show usernames that are available")
+    parser.add_argument("-a", "--available-only", action="store_true", help="only print usernames that are available")
     args = parser.parse_args()
 
     usernames = args.usernames
@@ -60,14 +61,14 @@ async def main():
         platform_queries = [util.is_username_available(i, username, session) for username in usernames for i in platforms]
         results = defaultdict(list)
         exceptions = []
-        for future in tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
+        for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
             try:
                 response = await future
                 if args.available_only and response.valid or not args.available_only:
                     results[response.username].append(response)
             # Catch only networking errors and errors in JSON handling
             except (aiohttp.ClientError, KeyError) as e:
-                exceptions.append(colorama.Back.RED + f"{type(e).__name__}: {e}" + colorama.Style.RESET_ALL)
+                exceptions.append(colorama.Back.RED + f"{type(e).__name__}: {e}")
         for username, responses in results.items():
             print(DIVIDER * (len(username)))
             print(username)
@@ -79,7 +80,7 @@ async def main():
                     fore = colorama.Fore.GREEN
                 else:
                     fore = colorama.Fore.RED
-                print(fore + f"{response.platform.name.capitalize()}" + colorama.Style.RESET_ALL, end="")
+                print(fore + f"{response.platform.name.capitalize()}", end="")
                 print(f": {response.message}" if not response.valid else "")
     print(*exceptions, sep="\n", file=sys.stderr)
     print("Completed {} queries in {:.2f}s".format(len(platform_queries), time.time() - startTime))
