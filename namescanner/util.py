@@ -212,7 +212,7 @@ async def check_reddit(username, session, response):
 
 
 async def check_gitlab(username, session, response):
-    # Custom matching required as validation is implemented locally by GitLab
+    # Custom matching required as validation is implemented locally and not server-side by GitLab
     if username == "s" or username == "u" or not re.match(r"[a-zA-Z0-9_\.][a-zA-Z0-9_\-\.]*[a-zA-Z0-9_\-]|[a-zA-Z0-9_]", username):
         response.invalid("Please create a username with only alphanumeric characters.")
         return response

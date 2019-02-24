@@ -17,7 +17,8 @@ BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
 TIMEOUT_PER_QUERY = 1
 CLEAR_LINE = "\x1b[2K"
-DIVIDER = "-" * 40
+DIVIDER = "-"
+DIVIDER_LENGTH = 40
 
 
 async def main():
@@ -70,23 +71,23 @@ async def main():
             # Catch only networking errors and errors in JSON handling
             except (aiohttp.ClientError, KeyError) as e:
                 exceptions.append(colorama.Back.RED + f"{type(e).__name__}: {e}")
-        for username, responses in results.items():
-            print(DIVIDER)
-            print(" " * (len(DIVIDER) // 2 - len(username) // 2) + colorama.Style.BRIGHT + username)
-            print(DIVIDER)
+        for username in usernames:
+            responses = results[username]
+            print(DIVIDER * DIVIDER_LENGTH)
+            print(" " * (DIVIDER_LENGTH // 2 - len(username) // 2) + colorama.Style.BRIGHT + username)
+            print(DIVIDER * DIVIDER_LENGTH)
             responses.sort(key=attrgetter('platform.name'))
             responses.sort(key=attrgetter('valid', "success"), reverse=True)
             for response in responses:
                 if not response.success:
-                    fore = colorama.Fore.YELLOW
+                    name_col = colorama.Fore.WHITE
+                    message_col = colorama.Fore.RED
                 elif response.valid:
-                    fore = colorama.Fore.GREEN
+                    name_col = message_col = colorama.Fore.GREEN
                 else:
-                    fore = colorama.Fore.WHITE
-                print(fore + f"{response.platform.name.capitalize()}", end="")
-                print(": " + colorama.Fore.YELLOW + f"{response.message}" if not response.valid else "")
+                    name_col = colorama.Fore.WHITE
+                    message_col = colorama.Fore.YELLOW
+                print(name_col + f"{response.platform.name.capitalize()}", end="")
+                print(name_col + ": " + message_col + f"{response.message}" if not response.valid else "")
     print(*exceptions, sep="\n", file=sys.stderr)
     print("Completed {} queries in {:.2f}s".format(len(platform_queries), time.time() - startTime))
-
-if __name__ == "__main__":
-    asyncio.run(main())

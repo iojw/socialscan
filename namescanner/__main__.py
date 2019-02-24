@@ -1,5 +1,11 @@
 import asyncio
 
-from namescanner.cli import main
+from namescanner import cli
 
-asyncio.run(main())
+
+def main():
+    asyncio.run(cli.main())
+
+
+if __name__ == "__main__":
+    main()
