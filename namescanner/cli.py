@@ -4,6 +4,7 @@ import argparse
 import sys
 import time
 from collections import defaultdict
+from operator import attrgetter
 
 import aiohttp
 import colorama
@@ -16,7 +17,7 @@ BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
 TIMEOUT_PER_QUERY = 1
 CLEAR_LINE = "\x1b[2K"
-DIVIDER = "-"
+DIVIDER = "-" * 40
 
 
 async def main():
@@ -70,18 +71,20 @@ async def main():
             except (aiohttp.ClientError, KeyError) as e:
                 exceptions.append(colorama.Back.RED + f"{type(e).__name__}: {e}")
         for username, responses in results.items():
-            print(DIVIDER * (len(username)))
-            print(username)
-            print(DIVIDER * (len(username)))
+            print(DIVIDER)
+            print(" " * (len(DIVIDER) // 2 - len(username) // 2) + colorama.Style.BRIGHT + username)
+            print(DIVIDER)
+            responses.sort(key=attrgetter('platform.name'))
+            responses.sort(key=attrgetter('valid', "success"), reverse=True)
             for response in responses:
                 if not response.success:
                     fore = colorama.Fore.YELLOW
                 elif response.valid:
                     fore = colorama.Fore.GREEN
                 else:
-                    fore = colorama.Fore.RED
+                    fore = colorama.Fore.WHITE
                 print(fore + f"{response.platform.name.capitalize()}", end="")
-                print(f": {response.message}" if not response.valid else "")
+                print(": " + colorama.Fore.YELLOW + f"{response.message}" if not response.valid else "")
     print(*exceptions, sep="\n", file=sys.stderr)
     print("Completed {} queries in {:.2f}s".format(len(platform_queries), time.time() - startTime))
 

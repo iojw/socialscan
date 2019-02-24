@@ -21,12 +21,12 @@ class PlatformResponse:
         self.success = False
         self.message = message
 
-    def valid(self, message="Available"):
+    def valid(self, message="Username is available"):
         self.valid = True
         self.success = True
         self.message = message
 
-    def invalid(self, message="Unavailable"):
+    def invalid(self, message="Username is unavailable"):
         self.valid = False
         self.success = True
         self.message = message
@@ -211,12 +211,31 @@ async def check_reddit(username, session, response):
         return response
 
 
+async def check_gitlab(username, session, response):
+    # Regex matching required as validation is implemented locally by GitLab
+    if not re.match(r"[a-zA-Z0-9_\.][a-zA-Z0-9_\-\.]*[a-zA-Z0-9_\-]|[a-zA-Z0-9_]", username):
+        response.invalid("Please create a username with only alphanumeric characters.")
+        return response
+    async with session.get(Platforms.GITLAB.endpoint.format(username),
+                           headers=DEFAULT_HEADERS) as r:
+        if not content_type(r).startswith(CONTENT_TYPE_JSON):
+            response.failure(UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(content_type(r)))
+            return response
+        json_body = await r.json()
+        if json_body["exists"]:
+            response.invalid()
+        else:
+            response.valid()
+        return response
+
+
 def content_type(request):
     return request.headers["Content-Type"]
 
 
 async def is_username_available(platform, username, session):
     dispatch = {Platforms.GITHUB: check_github,
+                Platforms.GITLAB: check_gitlab,
                 Platforms.INSTAGRAM: check_instagram,
                 Platforms.REDDIT: check_reddit,
                 Platforms.SNAPCHAT: check_snapchat,

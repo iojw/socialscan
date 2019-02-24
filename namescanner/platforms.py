@@ -4,6 +4,8 @@ from enum import Enum
 class Platforms(Enum):
     GITHUB = ("https://github.com/join",
               "https://github.com/signup_check/username")
+    GITLAB = ("https://gitlab.com/users/sign_in",
+              "https://gitlab.com/users/{}/exists")
     INSTAGRAM = ("https://instagram.com",
                  "https://www.instagram.com/accounts/web_create_ajax/attempt/")
     REDDIT = ("https://reddit.com",
