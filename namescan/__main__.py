@@ -1,6 +1,6 @@
 import asyncio
 
-from namescanner import cli
+from namescan import cli
 
 
 def main():

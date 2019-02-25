@@ -10,8 +10,8 @@ import aiohttp
 import colorama
 import tqdm
 
-from namescanner import util
-from namescanner.platforms import Platforms
+from namescan import util
+from namescan.platforms import Platforms
 
 BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
@@ -26,15 +26,15 @@ async def main():
     colorama.init(autoreset=True)
     sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description="Command-line interface for querying username availability on online platforms: " + ", ".join(p.name.capitalize() for p in Platforms))
-    parser.add_argument("usernames", metavar="username", nargs="*",
-                        help="list of usernames to query")
-    parser.add_argument("-r", "--restrict", metavar="platform", nargs="*", help="restrict list of platforms to query "
+    parser.add_argument("usernames", metavar="USERNAME", nargs="*",
+                        help="one or more usernames to query")
+    parser.add_argument("--restrict", "-r", metavar="PLATFORM", nargs="*", help="restrict list of platforms to query "
                                                                                 "(default: all platforms)")
-    parser.add_argument("-i", "--input-file", metavar="filename.txt",
+    parser.add_argument("--input-file", "-i", metavar="INPUTFILE.TXT",
                         help="file from which to read in usernames, one per line")
-    parser.add_argument("-c", "--cache-tokens", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram & Tumblr) "
+    parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram & Tumblr) "
                         "marginally increases runtime but halves number of requests")
-    parser.add_argument("-a", "--available-only", action="store_true", help="only print usernames that are available")
+    parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames that are available")
     args = parser.parse_args()
 
     usernames = args.usernames

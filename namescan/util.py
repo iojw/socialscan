@@ -1,12 +1,12 @@
 import re
 
-from namescanner.platforms import Platforms
+from namescan.platforms import Platforms
 
 CONTENT_TYPE_JSON = "application/json"
 UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT = "Received unexpected content type {}. Wait before trying again"
 TOKEN_ERROR_MESSAGE = "Could not retrieve token. Wait before trying again"
 TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Wait before trying again"
-DEFAULT_HEADERS = {"User-agent": "namescanner 1.0"}
+DEFAULT_HEADERS = {"User-agent": "namescan 1.0"}
 tokens = {}
 
 
