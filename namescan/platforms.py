@@ -234,7 +234,6 @@ class GitLab(PlatformChecker):
             return self.response_invalid(username, "Please create a username with only alphanumeric characters.")
         async with self.session.get(self.ENDPOINT.format(username),
                                     headers=self.DEFAULT_HEADERS) as r:
-            text = await r.text()
             if not self.is_json(r):
                 return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
             json_body = await r.json()
@@ -265,13 +264,13 @@ class Reddit(PlatformChecker):
 
 class Twitter(PlatformChecker):
     URL = "https://twitter.com/signup",
-    UN_ENDPOINT = "https://twitter.com/users/username_available"
+    USERNAME_ENDPOINT = "https://twitter.com/users/username_available"
     EMAIL_ENDPOINT = "https://api.twitter.com/i/users/email_available.json"
     # [account in use, account suspended]
     TAKEN_MESSAGES = ["That username has been taken", "unavailable"]
 
     async def check_username(self, username):
-        async with self.session.get(self.UN_ENDPOINT,
+        async with self.session.get(self.USERNAME_ENDPOINT,
                                     params={"username": username},
                                     headers=self.DEFAULT_HEADERS) as r:
             if not self.is_json(r):
@@ -282,6 +281,22 @@ class Twitter(PlatformChecker):
                 return self.response_available(username, message)
             else:
                 return self.response_taken_or_invalid(username, message)
+
+    async def check_email(self, email):
+        async with self.session.get(self.EMAIL_ENDPOINT,
+                                    params={"email": email},
+                                    headers=self.DEFAULT_HEADERS) as r:
+            if not self.is_json(r):
+                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
+            json_body = await r.json()
+            message = json_body["msg"]
+            if not json_body["valid"]:
+                return self.response_invalid(email, message)
+
+            if not json_body["taken"]:
+                return self.response_available(email, message)
+            else:
+                return self.response_taken(email, message)
 
 
 class Platforms(Enum):
