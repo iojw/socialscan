@@ -7,7 +7,7 @@ from collections import defaultdict
 from operator import attrgetter
 
 import aiohttp
-import colorama
+from colorama import Fore, Back, Style, init
 import tqdm
 
 from namescan import util
@@ -23,10 +23,10 @@ DIVIDER_LENGTH = 40
 
 async def main():
     startTime = time.time()
-    colorama.init(autoreset=True)
+    init(autoreset=True)
     sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description="Command-line interface for querying username availability on online platforms: " + ", ".join(p.name.capitalize() for p in Platforms))
-    parser.add_argument("usernames", metavar="USERNAME", nargs="*",
+    parser.add_argument("usernames", metavar="username", nargs="*",
                         help="one or more usernames to query")
     parser.add_argument("--restrict", "-r", metavar="PLATFORM", nargs="*", help="restrict list of platforms to query "
                                                                                 "(default: all platforms)")
@@ -56,38 +56,46 @@ async def main():
     usernames = list(dict.fromkeys(usernames))
 
     async with aiohttp.ClientSession() as session:
+        checkers = util.init_checkers(session)
+
         if args.cache_tokens:
             print("Caching tokens...", end="")
-            await asyncio.gather(*(util.prerequest(platform, session) for platform in platforms))
+            await asyncio.gather(*(util.init_prerequest(platform, checkers) for platform in platforms))
             print(CLEAR_LINE, end="")
-        platform_queries = [util.is_username_available(i, username, session) for username in usernames for i in platforms]
+        platform_queries = [util.is_username_available(p, username, checkers) for username in usernames for p in platforms]
         results = defaultdict(list)
         exceptions = []
         for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
-            try:
-                response = await future
-                if args.available_only and response.valid or not args.available_only:
-                    results[response.username].append(response)
-            # Catch only networking errors and errors in JSON handling
-            except (aiohttp.ClientError, KeyError) as e:
-                exceptions.append(colorama.Back.RED + f"{type(e).__name__}: {e}")
+            response = await future
+            if args.available_only and response.valid or not args.available_only:
+                results[response.username].append(response)
         for username in usernames:
             responses = results[username]
             print(DIVIDER * DIVIDER_LENGTH)
-            print(" " * (DIVIDER_LENGTH // 2 - len(username) // 2) + colorama.Style.BRIGHT + username)
+            print(" " * (DIVIDER_LENGTH // 2 - len(username) // 2) + Style.BRIGHT + username)
             print(DIVIDER * DIVIDER_LENGTH)
             responses.sort(key=attrgetter('platform.name'))
-            responses.sort(key=attrgetter('valid', "success"), reverse=True)
+            responses.sort(key=attrgetter('available', 'valid', "success"), reverse=True)
             for response in responses:
                 if not response.success:
-                    name_col = colorama.Fore.WHITE
-                    message_col = colorama.Fore.RED
-                elif response.valid:
-                    name_col = message_col = colorama.Fore.GREEN
+                    name_col = Fore.RED
+                    message_col = Fore.RED
+                elif response.available:
+                    name_col = message_col = Fore.GREEN
+                elif not response.valid:
+                    name_col = Fore.CYAN
+                    message_col = Fore.WHITE
                 else:
-                    name_col = colorama.Fore.WHITE
-                    message_col = colorama.Fore.YELLOW
+                    name_col = Fore.YELLOW
+                    message_col = Fore.WHITE
                 print(name_col + f"{response.platform.name.capitalize()}", end="")
-                print(name_col + ": " + message_col + f"{response.message}" if not response.valid else "")
+                if not response.valid or not response.success:
+                    print(name_col + ": " + message_col + f"{response.message}")
+                else:
+                    print()
     print(*exceptions, sep="\n", file=sys.stderr)
+    print(Fore.GREEN + "Available, ", end="")
+    print(Fore.YELLOW + "Unavailable, ", end="")
+    print(Fore.CYAN + "Invalid, ", end="")
+    print(Fore.RED + "Error")
     print("Completed {} queries in {:.2f}s".format(len(platform_queries), time.time() - startTime))
