@@ -10,10 +10,10 @@ class PlatformResponse:
 
 
 class PlatformChecker:
-    DEFAULT_HEADERS = {"User-agent": "namescan 1.0", "Accept-Language": "en"}
-    UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT = "Received unexpected content type. Wait before trying again"
-    TOKEN_ERROR_MESSAGE = "Could not retrieve token. Wait before trying again"
-    TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Wait before trying again"
+    DEFAULT_HEADERS = {"User-agent": "namescan 1.0", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
+    UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Received unexpected content. Wait before trying again."
+    TOKEN_ERROR_MESSAGE = "Could not retrieve token. Wait before trying again."
+    TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Wait before trying again."
 
     prerequest_req = False
 
@@ -51,7 +51,7 @@ class PlatformChecker:
         response.message = message
         return response
 
-    def response_taken(self, username, message="Username is unavailable"):
+    def response_unavailable(self, username, message="Username is unavailable"):
         response = PlatformResponse(Platforms(self.__class__), username)
         response.valid = response.success = True
         response.available = False
@@ -65,9 +65,9 @@ class PlatformChecker:
         response.message = message
         return response
 
-    def response_taken_or_invalid(self, username, message):
+    def response_unavailable_or_invalid(self, username, message):
         if self.is_taken(message):
-            return self.response_taken(username, message)
+            return self.response_unavailable(username, message)
         else:
             return self.response_invalid(username, message)
 
@@ -103,7 +103,7 @@ class Snapchat(PlatformChecker):
             cookies = r.headers.getall("Set-Cookie")
             for cookie in cookies:
                 match = re.search(r"xsrf_token=([\w-]*);", cookie)
-                if match and match.group(1) != "":
+                if match:
                     token = match.group(1)
                     return token
 
@@ -116,10 +116,10 @@ class Snapchat(PlatformChecker):
                                      headers=self.DEFAULT_HEADERS,
                                      cookies={'xsrf_token': token}) as r:
             if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
+                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             if "error_message" in json_body["reference"]:
-                return self.response_taken_or_invalid(username, json_body["reference"]["error_message"])
+                return self.response_unavailable_or_invalid(username, json_body["reference"]["error_message"])
             else:
                 return self.response_available(username)
 
@@ -145,12 +145,12 @@ class Instagram(PlatformChecker):
                                      data={"username": username},
                                      headers={**self.DEFAULT_HEADERS, 'x-csrftoken': token}) as r:
             if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
+                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             if json_body["status"] == "fail":
                 return self.response_failure(username, json_body["message"])
             if "username" in json_body["errors"]:
-                return self.response_taken_or_invalid(username, json_body["errors"]["username"][0]["message"])
+                return self.response_unavailable_or_invalid(username, json_body["errors"]["username"][0]["message"])
             else:
                 return self.response_available(username)
 
@@ -184,7 +184,7 @@ class GitHub(PlatformChecker):
                                      cookies=cookies) as r:
             if r.status == 422:
                 text = await r.text()
-                return self.response_taken_or_invalid(username, text)
+                return self.response_unavailable_or_invalid(username, text)
             elif r.status == 200:
                 return self.response_available(username)
             elif r.status == 429:
@@ -216,10 +216,10 @@ class Tumblr(PlatformChecker):
                                      data={"action": "signup_account", "form_key": token, "user[email]": SAMPLE_UNUSED_EMAIL, "user[password]": SAMPLE_PASSWORD, "tumblelog[name]": username},
                                      headers=self.DEFAULT_HEADERS) as r:
             if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
+                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             if "usernames" in json_body or len(json_body["errors"]) > 0:
-                return self.response_taken_or_invalid(username, json_body["errors"][0])
+                return self.response_unavailable_or_invalid(username, json_body["errors"][0])
             else:
                 return self.response_available(username)
 
@@ -230,15 +230,17 @@ class GitLab(PlatformChecker):
 
     async def check_username(self, username):
         # Custom matching required as validation is implemented locally and not server-side by GitLab
-        if username == "s" or username == "u" or not re.match(r"[a-zA-Z0-9_\.][a-zA-Z0-9_\-\.]*[a-zA-Z0-9_\-]|[a-zA-Z0-9_]", username):
+        if not re.match(r"[a-zA-Z0-9_\.][a-zA-Z0-9_\-\.]*[a-zA-Z0-9_\-]|[a-zA-Z0-9_]", username):
             return self.response_invalid(username, "Please create a username with only alphanumeric characters.")
         async with self.session.get(self.ENDPOINT.format(username),
-                                    headers=self.DEFAULT_HEADERS) as r:
+                                    headers={**self.DEFAULT_HEADERS, "X-Requested-With": "XMLHttpRequest"}) as r:
+            if r.status == 401:
+                return self.response_unavailable(username)
             if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
+                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             if json_body["exists"]:
-                return self.response_taken(username)
+                return self.response_unavailable(username)
             else:
                 return self.response_available(username)
 
@@ -254,10 +256,10 @@ class Reddit(PlatformChecker):
                                      data={"user": username},
                                      headers=self.DEFAULT_HEADERS) as r:
             if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
+                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             if "json" in json_body:
-                return self.response_taken_or_invalid(username, json_body["json"]["errors"][0][1])
+                return self.response_unavailable_or_invalid(username, json_body["json"]["errors"][0][1])
             else:
                 return self.response_available(username)
 
@@ -274,20 +276,20 @@ class Twitter(PlatformChecker):
                                     params={"username": username},
                                     headers=self.DEFAULT_HEADERS) as r:
             if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
+                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             message = json_body["desc"]
             if json_body["valid"]:
                 return self.response_available(username, message)
             else:
-                return self.response_taken_or_invalid(username, message)
+                return self.response_unavailable_or_invalid(username, message)
 
     async def check_email(self, email):
         async with self.session.get(self.EMAIL_ENDPOINT,
                                     params={"email": email},
                                     headers=self.DEFAULT_HEADERS) as r:
             if not self.is_json(r):
-                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE_FORMAT.format(self.content_type(r)))
+                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             message = json_body["msg"]
             if not json_body["valid"]:
@@ -296,13 +298,54 @@ class Twitter(PlatformChecker):
             if not json_body["taken"]:
                 return self.response_available(email, message)
             else:
-                return self.response_taken(email, message)
+                return self.response_unavailable(email, message)
+
+
+class Pastebin(PlatformChecker):
+    URL = "https://pastebin.com/signup",
+    USERNAME_ENDPOINT = "https://pastebin.com/ajax/check_username.php"
+    EMAIL_ENDPOINT = "https://pastebin.com/ajax/check_email.php"
+    TAKEN_MESSAGES = ["Username not available!"]
+
+    regex = re.compile(r"<font color=\"(red|green)\">([\w\s.!,?;:-_]+)<\/font>")
+
+    async def check_username(self, username):
+        async with self.session.post(self.USERNAME_ENDPOINT,
+                                     params={"action": "check_username", "username": username},
+                                     headers=self.DEFAULT_HEADERS) as r:
+            text = await r.text()
+            match = self.regex.match(text)
+            if not match:
+                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
+            else:
+                message = match[2]
+                if match[1] == "green":
+                    return self.response_available(username, message)
+                else:
+                    return self.response_unavailable_or_invalid(username, message)
+
+    async def check_email(self, email):
+        async with self.session.post(self.EMAIL_ENDPOINT,
+                                     params={"action": "check_email", "email": email},
+                                     headers=self.DEFAULT_HEADERS) as r:
+            text = await r.text()
+            match = self.regex.match(text)
+            if not match:
+                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
+            else:
+                message = match[2]
+                if match[1] == "green":
+                    return self.response_available(email, message)
+                else:
+                    # It is assumed that the email passed to this function is valid so we do not handle the invalid case here
+                    return self.unavailable(email, message)
 
 
 class Platforms(Enum):
     GITHUB = GitHub
     GITLAB = GitLab
     INSTAGRAM = Instagram
+    PASTEBIN = Pastebin
     REDDIT = Reddit
     SNAPCHAT = Snapchat
     TWITTER = Twitter
