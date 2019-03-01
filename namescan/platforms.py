@@ -147,12 +147,31 @@ class Instagram(PlatformChecker):
             if not self.is_json(r):
                 return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
+            # Too many requests
             if json_body["status"] == "fail":
                 return self.response_failure(username, json_body["message"])
             if "username" in json_body["errors"]:
                 return self.response_unavailable_or_invalid(username, json_body["errors"]["username"][0]["message"])
             else:
                 return self.response_available(username)
+
+    async def check_email(self, email):
+        token = await self.get_token()
+        if token is None:
+            return self.response_failure(email, self.TOKEN_ERROR_MESSAGE)
+        async with self.session.post(self.ENDPOINT,
+                                     data={"email": email},
+                                     headers={**self.DEFAULT_HEADERS, 'x-csrftoken': token}) as r:
+            if not self.is_json(r):
+                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
+            json_body = await r.json()
+            # Too many requests
+            if json_body["status"] == "fail":
+                return self.response_failure(email, json_body["message"])
+            if "email" in json_body["errors"]:
+                return self.response_unavailable(email, json_body["errors"]["email"][0]["message"])
+            else:
+                return self.response_available(email)
 
 
 class GitHub(PlatformChecker):
@@ -292,13 +311,13 @@ class Twitter(PlatformChecker):
                 return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             message = json_body["msg"]
-            if not json_body["valid"]:
+            if not json_body["valid"] and not json_body["taken"]:
                 return self.response_invalid(email, message)
 
-            if not json_body["taken"]:
-                return self.response_available(email, message)
-            else:
+            if json_body["taken"]:
                 return self.response_unavailable(email, message)
+            else:
+                return self.response_available(email, message)
 
 
 class Pastebin(PlatformChecker):
@@ -311,7 +330,7 @@ class Pastebin(PlatformChecker):
 
     async def check_username(self, username):
         async with self.session.post(self.USERNAME_ENDPOINT,
-                                     params={"action": "check_username", "username": username},
+                                     data={"action": "check_username", "username": username},
                                      headers=self.DEFAULT_HEADERS) as r:
             text = await r.text()
             match = self.regex.match(text)
@@ -326,7 +345,7 @@ class Pastebin(PlatformChecker):
 
     async def check_email(self, email):
         async with self.session.post(self.EMAIL_ENDPOINT,
-                                     params={"action": "check_email", "email": email},
+                                     data={"action": "check_email", "username": email},
                                      headers=self.DEFAULT_HEADERS) as r:
             text = await r.text()
             match = self.regex.match(text)
@@ -338,7 +357,7 @@ class Pastebin(PlatformChecker):
                     return self.response_available(email, message)
                 else:
                     # It is assumed that the email passed to this function is valid so we do not handle the invalid case here
-                    return self.unavailable(email, message)
+                    return self.response_unavailable(email, message)
 
 
 class Platforms(Enum):
