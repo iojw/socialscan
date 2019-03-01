@@ -78,21 +78,20 @@ async def main():
             responses.sort(key=attrgetter('available', 'valid', "success"), reverse=True)
             for response in responses:
                 if not response.success:
-                    name_col = Fore.RED
-                    message_col = Fore.RED
-                elif response.available:
-                    name_col = message_col = Fore.GREEN
-                elif not response.valid:
-                    name_col = Fore.CYAN
-                    message_col = Fore.WHITE
+                    col = Fore.RED
+                    print(col + f"{response.platform.value.__name__}: {response.message}", file=sys.stderr)
                 else:
-                    name_col = Fore.YELLOW
-                    message_col = Fore.WHITE
-                print(name_col + f"{response.platform.name.capitalize()}", end="")
-                if not response.valid or not response.success:
-                    print(name_col + ": " + message_col + f"{response.message}")
-                else:
-                    print()
+                    if response.available:
+                        name_col = message_col = Fore.GREEN
+                    elif not response.valid:
+                        name_col = Fore.CYAN
+                        message_col = Fore.WHITE
+                    else:
+                        name_col = Fore.YELLOW
+                        message_col = Fore.WHITE
+                    print(name_col + f"{response.platform.value.__name__}", end="")
+                    print(name_col + ": " + message_col + f"{response.message}" if not response.valid else "")
+
     print(*exceptions, sep="\n", file=sys.stderr)
     print(Fore.GREEN + "Available, ", end="")
     print(Fore.YELLOW + "Unavailable, ", end="")
