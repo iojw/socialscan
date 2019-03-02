@@ -23,6 +23,9 @@ class PlatformChecker:
     async def check_username(self, username):
         pass
 
+    async def check_email(self, email):
+        pass
+
     async def get_token(self):
         """
         Normal calls will not be able to take advantage of this as all tokens are retrieved concurrently
@@ -168,10 +171,14 @@ class Instagram(PlatformChecker):
             # Too many requests
             if json_body["status"] == "fail":
                 return self.response_failure(email, json_body["message"])
-            if "email" in json_body["errors"]:
-                return self.response_unavailable(email, json_body["errors"]["email"][0]["message"])
-            else:
+            if "email" not in json_body["errors"]:
                 return self.response_available(email)
+            else:
+                message = json_body["errors"]["email"][0]["message"]
+                if json_body["errors"]["email"][0]["code"] == "invalid_email":
+                    return self.response_invalid(email, message)
+                else:
+                    return self.response_unavailable(email, message)
 
 
 class GitHub(PlatformChecker):
@@ -249,7 +256,7 @@ class GitLab(PlatformChecker):
 
     async def check_username(self, username):
         # Custom matching required as validation is implemented locally and not server-side by GitLab
-        if not re.match(r"[a-zA-Z0-9_\.][a-zA-Z0-9_\-\.]*[a-zA-Z0-9_\-]|[a-zA-Z0-9_]", username):
+        if not re.fullmatch(r"[a-zA-Z0-9_\.][a-zA-Z0-9_\-\.]*[a-zA-Z0-9_\-]|[a-zA-Z0-9_]", username):
             return self.response_invalid(username, "Please create a username with only alphanumeric characters.")
         async with self.session.get(self.ENDPOINT.format(username),
                                     headers={**self.DEFAULT_HEADERS, "X-Requested-With": "XMLHttpRequest"}) as r:
@@ -326,7 +333,7 @@ class Pastebin(PlatformChecker):
     EMAIL_ENDPOINT = "https://pastebin.com/ajax/check_email.php"
     TAKEN_MESSAGES = ["Username not available!"]
 
-    regex = re.compile(r"<font color=\"(red|green)\">([\w\s.!,?;:-_]+)<\/font>")
+    regex = re.compile(r"^<font color=\"(red|green)\">([^<>]+)<\/font>$")
 
     async def check_username(self, username):
         async with self.session.post(self.USERNAME_ENDPOINT,
@@ -355,8 +362,9 @@ class Pastebin(PlatformChecker):
                 message = match[2]
                 if match[1] == "green":
                     return self.response_available(email, message)
+                elif message == "Please use a valid email address.":
+                    return self.response_invalid(email, message)
                 else:
-                    # It is assumed that the email passed to this function is valid so we do not handle the invalid case here
                     return self.response_unavailable(email, message)
 
 
