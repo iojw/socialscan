@@ -67,7 +67,7 @@ async def main():
         exceptions = []
         for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
             response = await future
-            if response and (args.available_only and response.valid or not args.available_only):
+            if response and (args.available_only and response.available or not args.available_only):
                 results[response.username].append(response)
         for username in usernames:
             responses = results[username]
@@ -82,7 +82,7 @@ async def main():
                     print(col + f"{response.platform.value.__name__}: {response.message}", file=sys.stderr)
                 else:
                     if response.available:
-                        name_col = message_col = Fore.GREEN
+                        name_col = message_col = Fore.LIGHTGREEN_EX
                     elif not response.valid:
                         name_col = Fore.CYAN
                         message_col = Fore.WHITE
