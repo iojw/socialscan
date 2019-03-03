@@ -25,7 +25,7 @@ async def main():
     startTime = time.time()
     init(autoreset=True)
     sys.stdout.reconfigure(encoding='utf-8')
-    parser = argparse.ArgumentParser(description="Command-line interface for querying username and email address availability on online platforms: " + ", ".join(p.value.__name__ for p in Platforms))
+    parser = argparse.ArgumentParser(description="Command-line interface for checking username and email address usage on online platforms: " + ", ".join(p.value.__name__ for p in Platforms))
     parser.add_argument("queries", metavar="query", nargs="*",
                         help="one or more usernames/email addresses to query (email addresses are automatically be queried if they match the format)")
     parser.add_argument("--restrict", "-r", metavar="platform", nargs="*", help="restrict list of platforms to query "
