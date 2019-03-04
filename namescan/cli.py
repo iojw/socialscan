@@ -28,8 +28,8 @@ async def main():
     parser = argparse.ArgumentParser(description="Command-line interface for checking username and email address usage on online platforms: " + ", ".join(p.value.__name__ for p in Platforms))
     parser.add_argument("queries", metavar="query", nargs="*",
                         help="one or more usernames/email addresses to query (email addresses are automatically be queried if they match the format)")
-    parser.add_argument("--restrict", "-r", metavar="platform", nargs="*", help="restrict list of platforms to query "
-                                                                                "(default: all platforms)")
+    parser.add_argument("--platforms", "-p", metavar="platform", nargs="*", help="restrict list of platforms to query "
+                                                                                 "(default: all platforms)")
     parser.add_argument("--input", "-i", metavar="input.txt",
                         help="file from which to read in queries, one per line")
     parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram & Tumblr) "
@@ -44,9 +44,9 @@ async def main():
                 usernames.append(line.strip("\n"))
     if not args.queries:
         raise ValueError("you must specify either at least one query or an input file")
-    if args.restrict:
+    if args.platforms:
         platforms = []
-        for p in args.restrict:
+        for p in args.platforms:
             if p.upper() in Platforms.__members__:
                 platforms.append(Platforms[p.upper()])
             else:
