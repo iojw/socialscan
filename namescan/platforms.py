@@ -5,10 +5,10 @@ import aiohttp
 
 
 class PlatformResponse:
-    def __init__(self, platform, username):
-        __slots__ = ["platform", "username", "available", "valid", "success", "message"]
+    def __init__(self, platform, query):
+        __slots__ = ["platform", "query", "available", "valid", "success", "message"]
         self.platform = platform
-        self.username = username
+        self.query = query
 
 
 class PlatformChecker:
@@ -44,39 +44,39 @@ class PlatformChecker:
             return self.token
 
     def is_taken(self, message):
-        return any(x in message for x in self.TAKEN_MESSAGES)
+        return any(x in message for x in self.USERNAME_TAKEN_MSGS)
 
-    def response_failure(self, username, message="Failure"):
-        response = PlatformResponse(Platforms(self.__class__), username)
+    def response_failure(self, query, message="Failure"):
+        response = PlatformResponse(Platforms(self.__class__), query)
         response.available = response.valid = response.success = False
         response.message = message
         return response
 
-    def response_available(self, username, message="Username is available"):
-        response = PlatformResponse(Platforms(self.__class__), username)
+    def response_available(self, query, message="Available"):
+        response = PlatformResponse(Platforms(self.__class__), query)
         response.available = response.valid = response.success = True
         response.message = message
         return response
 
-    def response_unavailable(self, username, message="Username is unavailable"):
-        response = PlatformResponse(Platforms(self.__class__), username)
+    def response_unavailable(self, query, message="Unavailable"):
+        response = PlatformResponse(Platforms(self.__class__), query)
         response.valid = response.success = True
         response.available = False
         response.message = message
         return response
 
-    def response_invalid(self, username, message="Username is invalid"):
-        response = PlatformResponse(Platforms(self.__class__), username)
+    def response_invalid(self, query, message="Invalid"):
+        response = PlatformResponse(Platforms(self.__class__), query)
         response.success = True
         response.valid = response.available = False
         response.message = message
         return response
 
-    def response_unavailable_or_invalid(self, username, message):
+    def response_unavailable_or_invalid(self, query, message):
         if self.is_taken(message):
-            return self.response_unavailable(username, message)
+            return self.response_unavailable(query, message)
         else:
-            return self.response_invalid(username, message)
+            return self.response_invalid(query, message)
 
     def post(self, url, **kwargs):
         if "headers" in kwargs:
@@ -103,13 +103,12 @@ class PlatformChecker:
     def __init__(self, session):
         self.session = session
         self.prerequest_sent = False
-        self.taken_messages = []
 
 
 class Snapchat(PlatformChecker):
     URL = "https://accounts.snapchat.com/accounts/login"
     ENDPOINT = "https://accounts.snapchat.com/accounts/get_username_suggestions"
-    TAKEN_MESSAGES = ["is already taken", "is currently unavailable"]
+    USERNAME_TAKEN_MSGS = ["is already taken", "is currently unavailable"]
 
     prerequest_req = True
 
@@ -143,11 +142,13 @@ class Snapchat(PlatformChecker):
             else:
                 return self.response_available(username)
 
+    # Email: Snapchat doesn't associate email addresses with accounts
+
 
 class Instagram(PlatformChecker):
     URL = "https://instagram.com"
     ENDPOINT = "https://www.instagram.com/accounts/web_create_ajax/attempt/"
-    TAKEN_MESSAGES = ["This username isn't available.", "A user with that username already exists."]
+    USERNAME_TAKEN_MSGS = ["This username isn't available.", "A user with that username already exists."]
 
     prerequest_req = True
 
@@ -200,29 +201,32 @@ class Instagram(PlatformChecker):
 
 class GitHub(PlatformChecker):
     URL = "https://github.com/join"
-    ENDPOINT = "https://github.com/signup_check/username"
+    USERNAME_ENDPOINT = "https://github.com/signup_check/username"
+    EMAIL_ENDPOINT = "https://github.com/signup_check/email"
     # Username 'x' is unavailable means reserved keyword while 'Username is already taken' means already in use
-    TAKEN_MESSAGES = ["Username is already taken", "unavailable"]
+    USERNAME_TAKEN_MSGS = ["Username is already taken", "unavailable"]
 
     prerequest_req = True
+    token_regex = re.compile(r'<auto-check src="/signup_check/username" csrf="([^\s]*)">[\s\S]*<auto-check src="/signup_check/email" csrf="([^\s]*)">')
 
     async def prerequest(self):
         async with self.get(self.URL) as r:
             text = await r.text()
-            match = re.search(r'auto-check src="/signup_check/username" csrf="([^\s]*)"', text)
+            match = self.token_regex.search(text)
             if match:
-                token = match.group(1)
+                username_token = match.group(1)
+                email_token = match.group(2)
                 # _gh_sess cookie required for GH username query
-                return (token, {"_gh_sess": r.cookies["_gh_sess"]})
+                return (username_token, email_token, {"_gh_sess": r.cookies["_gh_sess"]})
 
     async def check_username(self, username):
         pr = await self.get_token()
         if pr is None:
             return self.response_failure(username, self.TOKEN_ERROR_MESSAGE)
         else:
-            (token, cookies) = pr
-        async with self.post(self.ENDPOINT,
-                             data={"value": username, "authenticity_token": token},
+            (username_token, _, cookies) = pr
+        async with self.post(self.USERNAME_ENDPOINT,
+                             data={"value": username, "authenticity_token": username_token},
                              cookies=cookies) as r:
             if r.status == 422:
                 text = await r.text()
@@ -232,11 +236,32 @@ class GitHub(PlatformChecker):
             elif r.status == 429:
                 return self.response_failure(username, self.TOO_MANY_REQUEST_ERROR_MESSAGE)
 
+    async def check_email(self, email):
+        pr = await self.get_token()
+        if pr is None:
+            return self.response_failure(email, self.TOKEN_ERROR_MESSAGE)
+        else:
+            (_, email_token, cookies) = pr
+        async with self.post(self.EMAIL_ENDPOINT,
+                             data={"value": email, "authenticity_token": email_token},
+                             cookies=cookies) as r:
+            if r.status == 422:
+                text = await r.text()
+                return self.response_unavailable(email, text)
+            elif r.status == 200:
+                return self.response_available(email)
+            elif r.status == 429:
+                return self.response_failure(email, self.TOO_MANY_REQUEST_ERROR_MESSAGE)
+
 
 class Tumblr(PlatformChecker):
     URL = "https://tumblr.com/register"
     ENDPOINT = "https://www.tumblr.com/svc/account/register"
-    TAKEN_MESSAGES = ["That's a good one, but it's taken", "Someone beat you to that username", "Try something else, that one is spoken for"]
+    USERNAME_TAKEN_MSGS = ["That's a good one, but it's taken", "Someone beat you to that username", "Try something else, that one is spoken for"]
+
+    SAMPLE_UNUSED_EMAIL = "akc2rW33AuSqQWY8@gmail.com"
+    SAMPLE_PASSWORD = "correcthorsebatterystaple"
+    SAMPLE_UNUSED_USERNAME = "akc2rW33AuSqQWY8"
 
     prerequest_req = True
 
@@ -248,22 +273,33 @@ class Tumblr(PlatformChecker):
                 token = match.group(1)
                 return token
 
-    async def check_username(self, username):
+    async def _check(self, email=SAMPLE_UNUSED_EMAIL, username=SAMPLE_UNUSED_USERNAME):
+        query = email if username == self.SAMPLE_UNUSED_USERNAME else username
         token = await self.get_token()
         if token is None:
-            return self.response_failure(username, self.TOKEN_ERROR_MESSAGE)
-        SAMPLE_UNUSED_EMAIL = "akc2rW33AuSqQWY8@gmail.com"
-        SAMPLE_PASSWORD = "correcthorsebatterystaple"
+            return self.response_failure(query, self.TOKEN_ERROR_MESSAGE)
         async with self.post(self.ENDPOINT,
                              data={"action": "signup_account", "form_key": token,
-                                   "user[email]": SAMPLE_UNUSED_EMAIL, "user[password]": SAMPLE_PASSWORD, "tumblelog[name]": username}) as r:
+                                   "user[email]": email, "user[password]": self.SAMPLE_PASSWORD, "tumblelog[name]": username}) as r:
             if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
+                return self.response_failure(query, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
-            if "usernames" in json_body or len(json_body["errors"]) > 0:
-                return self.response_unavailable_or_invalid(username, json_body["errors"][0])
-            else:
-                return self.response_available(username)
+            if username == query:
+                if "usernames" in json_body or len(json_body["errors"]) > 0:
+                    return self.response_unavailable_or_invalid(query, json_body["errors"][0])
+                else:
+                    return self.response_available(query)
+            elif email == query:
+                if "This email address is already in use." in json_body["errors"]:
+                    return self.response_unavailable(query, json_body["errors"][0])
+                else:
+                    return self.response_available(query)
+
+    async def check_username(self, username):
+        return await self._check(username=username)
+
+    async def check_email(self, email):
+        return await self._check(email=email)
 
 
 class GitLab(PlatformChecker):
@@ -286,11 +322,13 @@ class GitLab(PlatformChecker):
             else:
                 return self.response_available(username)
 
+    # Email: GitLab requires a reCAPTCHA token to check email address usage which we cannot bypass
+
 
 class Reddit(PlatformChecker):
     URL = "https://reddit.com"
     ENDPOINT = "https://www.reddit.com/api/check_username.json"
-    TAKEN_MESSAGES = ["that username is already taken"]
+    USERNAME_TAKEN_MSGS = ["that username is already taken"]
 
     async def check_username(self, username):
         # Custom user agent required to overcome rate limits for Reddit API
@@ -304,13 +342,15 @@ class Reddit(PlatformChecker):
             else:
                 return self.response_available(username)
 
+    # Email: You can multiple Reddit accounts under the same email address so not possible to check if an address is in use
+
 
 class Twitter(PlatformChecker):
     URL = "https://twitter.com/signup",
     USERNAME_ENDPOINT = "https://twitter.com/users/username_available"
     EMAIL_ENDPOINT = "https://api.twitter.com/i/users/email_available.json"
     # [account in use, account suspended]
-    TAKEN_MESSAGES = ["That username has been taken", "unavailable"]
+    USERNAME_TAKEN_MSGS = ["That username has been taken", "unavailable"]
 
     async def check_username(self, username):
         async with self.get(self.USERNAME_ENDPOINT,
@@ -344,39 +384,35 @@ class Pastebin(PlatformChecker):
     URL = "https://pastebin.com/signup",
     USERNAME_ENDPOINT = "https://pastebin.com/ajax/check_username.php"
     EMAIL_ENDPOINT = "https://pastebin.com/ajax/check_email.php"
-    TAKEN_MESSAGES = ["Username not available!"]
+    USERNAME_TAKEN_MSGS = ["Username not available!"]
 
     regex = re.compile(r"^<font color=\"(red|green)\">([^<>]+)<\/font>$")
 
-    async def check_username(self, username):
-        async with self.post(self.USERNAME_ENDPOINT,
-                             data={"action": "check_username", "username": username}) as r:
+    async def _check(self, query, endpoint, data, is_email):
+        async with self.post(endpoint,
+                             data=data) as r:
             text = await r.text()
             match = self.regex.match(text)
             if not match:
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
+                return self.response_failure(query, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             else:
                 message = match[2]
                 if match[1] == "green":
-                    return self.response_available(username, message)
+                    return self.response_available(query, message)
                 else:
-                    return self.response_unavailable_or_invalid(username, message)
+                    if is_email:
+                        if message == "Please use a valid email address.":
+                            return self.response_invalid(query, message)
+                        else:
+                            return self.response_unavailable(query, message)
+                    else:
+                        return self.response_unavailable_or_invalid(query, message)
+
+    async def check_username(self, username):
+        return await self._check(username, self.USERNAME_ENDPOINT, data={"action": "check_username", "username": username}, is_email=False)
 
     async def check_email(self, email):
-        async with self.post(self.EMAIL_ENDPOINT,
-                             data={"action": "check_email", "username": email}) as r:
-            text = await r.text()
-            match = self.regex.match(text)
-            if not match:
-                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            else:
-                message = match[2]
-                if match[1] == "green":
-                    return self.response_available(email, message)
-                elif message == "Please use a valid email address.":
-                    return self.response_invalid(email, message)
-                else:
-                    return self.response_unavailable(email, message)
+        return await self._check(email, self.EMAIL_ENDPOINT, data={"action": "check_email", "username": email}, is_email=True)
 
 
 class Platforms(Enum):
