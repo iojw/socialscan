@@ -10,8 +10,8 @@ import aiohttp
 from colorama import Fore, Back, Style, init
 import tqdm
 
-from namescan import util
-from namescan.platforms import Platforms
+from socialscan import util
+from socialscan.platforms import Platforms
 
 BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
@@ -28,13 +28,14 @@ async def main():
     parser = argparse.ArgumentParser(description="Command-line interface for checking username and email address usage on online platforms: " + ", ".join(p.value.__name__ for p in Platforms))
     parser.add_argument("queries", metavar="query", nargs="*",
                         help="one or more usernames/email addresses to query (email addresses are automatically be queried if they match the format)")
-    parser.add_argument("--platforms", "-p", metavar="platform", nargs="*", help="restrict list of platforms to query "
+    parser.add_argument("--platforms", "-p", metavar="platform", nargs="*", help="list of platforms to query "
                                                                                  "(default: all platforms)")
     parser.add_argument("--input", "-i", metavar="input.txt",
-                        help="file from which to read in queries, one per line")
+                        help="input file from which to read in queries, one per line")
     parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram & Tumblr) "
                         "marginally increases runtime but halves number of requests")
     parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available")
+    parser.add_argument("--verbose", "-v", action="store_true", help="show response messages for all queries, even if available or unavailable")
     args = parser.parse_args()
 
     queries = args.queries
@@ -62,7 +63,7 @@ async def main():
             print("Caching tokens...", end="")
             await asyncio.gather(*(util.init_prerequest(platform, checkers) for platform in platforms))
             print(CLEAR_LINE, end="")
-        platform_queries = [util.check_available(p, query, checkers) for query in queries for p in platforms]
+        platform_queries = [util.query(p, query, checkers) for query in queries for p in platforms]
         results = defaultdict(list)
         exceptions = []
         for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
@@ -90,7 +91,7 @@ async def main():
                         name_col = Fore.YELLOW
                         message_col = Fore.WHITE
                     print(name_col + f"{response.platform.value.__name__}", end="")
-                    print(name_col + ": " + message_col + f"{response.message}" if not response.valid else "")
+                    print(name_col + ": " + message_col + f"{response.message}" if not response.valid or args.verbose else "")
 
     print(*exceptions, sep="\n", file=sys.stderr)
     print(Fore.GREEN + "Available, ", end="")

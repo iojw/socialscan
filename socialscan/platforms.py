@@ -12,7 +12,7 @@ class PlatformResponse:
 
 
 class PlatformChecker:
-    DEFAULT_HEADERS = {"User-agent": "namescan 1.0", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
+    DEFAULT_HEADERS = {"User-agent": "socialscan 1.0", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
     UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Received unexpected content. Wait before trying again."
     TOKEN_ERROR_MESSAGE = "Could not retrieve token. Wait before trying again."
     TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Wait before trying again."
@@ -203,7 +203,7 @@ class GitHub(PlatformChecker):
     URL = "https://github.com/join"
     USERNAME_ENDPOINT = "https://github.com/signup_check/username"
     EMAIL_ENDPOINT = "https://github.com/signup_check/email"
-    # Username 'x' is unavailable means reserved keyword while 'Username is already taken' means already in use
+    # [username taken, reserved keyword (Username __ is unavailable)]
     USERNAME_TAKEN_MSGS = ["Username is already taken", "unavailable"]
 
     prerequest_req = True

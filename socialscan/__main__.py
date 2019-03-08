@@ -1,6 +1,6 @@
 import asyncio
 
-from namescan import cli
+from socialscan import cli
 
 
 def main():
