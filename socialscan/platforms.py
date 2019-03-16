@@ -13,10 +13,10 @@ class PlatformResponse:
 
 class PlatformChecker:
     DEFAULT_HEADERS = {"User-agent": "socialscan 1.0", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
-    UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Received unexpected content. Wait before trying again."
-    TOKEN_ERROR_MESSAGE = "Could not retrieve token. Wait before trying again."
-    TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Wait before trying again."
-    TIMEOUT_DURATION = 5
+    UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Received unexpected content. You might be sending too many requests. Use a proxy or wait before trying again."
+    TOKEN_ERROR_MESSAGE = "Could not retrieve token. You might be sending too many requests. Use a proxy or wait before trying again."
+    TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Use a proxy or wait before trying again."
+    TIMEOUT_DURATION = 20
 
     client_timeout = aiohttp.ClientTimeout(connect=TIMEOUT_DURATION)
     prerequest_req = False
@@ -78,19 +78,20 @@ class PlatformChecker:
         else:
             return self.response_invalid(query, message)
 
-    def post(self, url, **kwargs):
+    def _request(self, method, url, **kwargs):
+        proxy = self.proxy_list[self.request_count % len(self.proxy_list)] if self.proxy_list else None
+        self.request_count += 1
         if "headers" in kwargs:
             kwargs["headers"].update(self.DEFAULT_HEADERS)
         else:
             kwargs["headers"] = self.DEFAULT_HEADERS
-        return self.session.post(url, timeout=self.client_timeout, **kwargs)
+        return self.session.request(method, url, timeout=self.client_timeout, proxy=proxy, **kwargs)
+
+    def post(self, url, **kwargs):
+        return self._request("POST", url, **kwargs)
 
     def get(self, url, **kwargs):
-        if "headers" in kwargs:
-            kwargs["headers"].update(self.DEFAULT_HEADERS)
-        else:
-            kwargs["headers"] = self.DEFAULT_HEADERS
-        return self.session.get(url, timeout=self.client_timeout, **kwargs)
+        return self._request("GET", url, **kwargs)
 
     @staticmethod
     def content_type(request):
@@ -100,8 +101,10 @@ class PlatformChecker:
     def is_json(request):
         return request.headers["Content-Type"].startswith("application/json")
 
-    def __init__(self, session):
+    def __init__(self, session, proxy_list=[]):
         self.session = session
+        self.proxy_list = proxy_list
+        self.request_count = 0
         self.prerequest_sent = False
 
 
@@ -216,7 +219,6 @@ class GitHub(PlatformChecker):
             if match:
                 username_token = match.group(1)
                 email_token = match.group(2)
-                # _gh_sess cookie required for GH username query
                 return (username_token, email_token, {"_gh_sess": r.cookies["_gh_sess"]})
 
     async def check_username(self, username):
@@ -328,7 +330,7 @@ class GitLab(PlatformChecker):
 class Reddit(PlatformChecker):
     URL = "https://reddit.com"
     ENDPOINT = "https://www.reddit.com/api/check_username.json"
-    USERNAME_TAKEN_MSGS = ["that username is already taken"]
+    USERNAME_TAKEN_MSGS = ["that username is already taken", "that username is taken by a deleted account"]
 
     async def check_username(self, username):
         # Custom user agent required to overcome rate limits for Reddit API
@@ -342,7 +344,7 @@ class Reddit(PlatformChecker):
             else:
                 return self.response_available(username)
 
-    # Email: You can multiple Reddit accounts under the same email address so not possible to check if an address is in use
+    # Email: You can register multiple Reddit accounts under the same email address so not possible to check if an address is in use
 
 
 class Twitter(PlatformChecker):

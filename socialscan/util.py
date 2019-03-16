@@ -11,10 +11,10 @@ async def init_prerequest(platform, checkers):
         await checkers[platform].get_token()
 
 
-def init_checkers(session):
+def init_checkers(session, proxy_list=[]):
     checkers = {}
     for platform in Platforms:
-        checkers[platform] = platform.value(session)
+        checkers[platform] = platform.value(session, proxy_list=proxy_list)
     return checkers
 
 

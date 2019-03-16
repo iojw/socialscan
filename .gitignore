@@ -2,9 +2,11 @@
 __pycache__/
 *.py[cod]
 
-# ST3 files
+# Project files
 *.sublime-workspace
 *.sublime-project
+.idea
+.vscode
 
 # Distribution / packaging
 .Python
