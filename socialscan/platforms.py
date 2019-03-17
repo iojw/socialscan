@@ -5,16 +5,6 @@ from enum import Enum
 import aiohttp
 
 
-@dataclass
-class PlatformResponse:
-    platform: str
-    query: str
-    available: bool
-    valid: bool
-    success: bool
-    message: str
-
-
 class PlatformChecker:
     DEFAULT_HEADERS = {"User-agent": "socialscan 1.0", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
     UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Received unexpected content. You might be sending too many requests. Use a proxy or wait before trying again."
@@ -432,12 +422,40 @@ class Pastebin(PlatformChecker):
         return await self._check(email, self.EMAIL_ENDPOINT, data={"action": "check_email", "username": email}, is_email=True)
 
 
+class Pinterest(PlatformChecker):
+    URL = "https://www.pinterest.com"
+    EMAIL_ENDPOINT = "https://www.pinterest.com/_ngjs/resource/EmailExistsResource/get/"
+
+    async def check_email(self, email):
+        data = '{"options": {"email": "%s"}, "context": {}}' % email
+        async with self.get(self.EMAIL_ENDPOINT, params={"source_url": "/", "data": data}) as r:
+            if not self.is_json(r):
+                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
+            json_body = await r.json()
+            email_exists = json_body["resource_response"]["data"]
+            if email_exists:
+                return self.response_unavailable(email)
+            else:
+                return self.response_available(email)
+
+
 class Platforms(Enum):
     GITHUB = GitHub
     GITLAB = GitLab
     INSTAGRAM = Instagram
     PASTEBIN = Pastebin
+    PINTEREST = Pinterest
     REDDIT = Reddit
     SNAPCHAT = Snapchat
     TWITTER = Twitter
     TUMBLR = Tumblr
+
+
+@dataclass
+class PlatformResponse:
+    platform: Platforms
+    query: str
+    available: bool
+    valid: bool
+    success: bool
+    message: str

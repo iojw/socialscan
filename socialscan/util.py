@@ -24,10 +24,13 @@ async def query(platform, query, checkers):
         is_email = EMAIL_REGEX.match(query)
         if is_email and "check_email" in platform.value.__dict__:
             return await checkers[platform].check_email(query)
-        elif not is_email:
+        elif not is_email and "check_username" in platform.value.__dict__:
             return await checkers[platform].check_username(query)
     except (aiohttp.ClientError, KeyError) as e:
-        response = PlatformResponse(platform, query)
-        response.available = response.valid = response.success = False
-        response.message = f"{type(e).__name__} - {e}"
+        response = PlatformResponse(platform=platform,
+                                    query=query,
+                                    available=False,
+                                    valid=False,
+                                    success=False,
+                                    message=f"{type(e).__name__} - {e}")
         return response
