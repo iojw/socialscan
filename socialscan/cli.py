@@ -1,14 +1,14 @@
 #! /usr/bin/env python
-import asyncio
 import argparse
+import asyncio
 import sys
 import time
 from collections import defaultdict
 from operator import attrgetter
 
 import aiohttp
-from colorama import Fore, Style, init
 import tqdm
+from colorama import Fore, Style, init
 
 from socialscan import util
 from socialscan.platforms import Platforms
@@ -21,7 +21,7 @@ DIVIDER_LENGTH = 40
 
 
 async def main():
-    startTime = time.time()
+    start_time = time.time()
     init(autoreset=True)
     sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description="Command-line interface for checking username and email address usage on online platforms: " + ", ".join(p.value.__name__ for p in Platforms))
@@ -79,9 +79,9 @@ async def main():
         for query in queries:
             responses = results[query]
             result_count += len(responses)
-            header = (DIVIDER * DIVIDER_LENGTH + "\n" +
-                      " " * (DIVIDER_LENGTH // 2 - len(query) // 2) + Style.BRIGHT + query + Style.RESET_ALL + "\n" +
-                      DIVIDER * DIVIDER_LENGTH)
+            header = (f"{DIVIDER * DIVIDER_LENGTH}\n"
+                      f"{' ' * (DIVIDER_LENGTH // 2 - len(query) // 2) + Style.BRIGHT + query + Style.RESET_ALL}\n"
+                      f"{DIVIDER * DIVIDER_LENGTH}")
             print(header)
             responses.sort(key=attrgetter('platform.name'))
             responses.sort(key=attrgetter('available', 'valid', "success"), reverse=True)
@@ -105,7 +105,7 @@ async def main():
 
     print(*exceptions, sep="\n", file=sys.stderr)
     print(Fore.LIGHTGREEN_EX + "Available, ", end="")
-    print(Fore.YELLOW + "Unavailable, ", end="")
+    print(Fore.YELLOW + "Taken/Reserved, ", end="")
     print(Fore.CYAN + "Invalid, ", end="")
     print(Fore.RED + "Error")
-    print("Completed {} queries in {:.2f}s".format(result_count, time.time() - startTime))
+    print("Completed {} queries in {:.2f}s".format(result_count, time.time() - start_time))

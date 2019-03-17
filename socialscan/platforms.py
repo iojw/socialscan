@@ -1,14 +1,18 @@
-from enum import Enum
 import re
+from dataclasses import dataclass
+from enum import Enum
 
 import aiohttp
 
 
+@dataclass
 class PlatformResponse:
-    def __init__(self, platform, query):
-        __slots__ = ["platform", "query", "available", "valid", "success", "message"]
-        self.platform = platform
-        self.query = query
+    platform: str
+    query: str
+    available: bool
+    valid: bool
+    success: bool
+    message: str
 
 
 class PlatformChecker:
@@ -47,29 +51,39 @@ class PlatformChecker:
         return any(x in message for x in self.USERNAME_TAKEN_MSGS)
 
     def response_failure(self, query, message="Failure"):
-        response = PlatformResponse(Platforms(self.__class__), query)
-        response.available = response.valid = response.success = False
-        response.message = message
+        response = PlatformResponse(platform=Platforms(self.__class__),
+                                    query=query,
+                                    available=False,
+                                    valid=False,
+                                    success=False,
+                                    message=message)
         return response
 
     def response_available(self, query, message="Available"):
-        response = PlatformResponse(Platforms(self.__class__), query)
-        response.available = response.valid = response.success = True
-        response.message = message
+        response = PlatformResponse(platform=Platforms(self.__class__),
+                                    query=query,
+                                    available=True,
+                                    valid=True,
+                                    success=True,
+                                    message=message)
         return response
 
     def response_unavailable(self, query, message="Unavailable"):
-        response = PlatformResponse(Platforms(self.__class__), query)
-        response.valid = response.success = True
-        response.available = False
-        response.message = message
+        response = PlatformResponse(platform=Platforms(self.__class__),
+                                    query=query,
+                                    available=False,
+                                    valid=True,
+                                    success=True,
+                                    message=message)
         return response
 
     def response_invalid(self, query, message="Invalid"):
-        response = PlatformResponse(Platforms(self.__class__), query)
-        response.success = True
-        response.valid = response.available = False
-        response.message = message
+        response = PlatformResponse(platform=Platforms(self.__class__),
+                                    query=query,
+                                    available=False,
+                                    valid=False,
+                                    success=True,
+                                    message=message)
         return response
 
     def response_unavailable_or_invalid(self, query, message):
@@ -106,6 +120,7 @@ class PlatformChecker:
         self.proxy_list = proxy_list
         self.request_count = 0
         self.prerequest_sent = False
+        self.token = None
 
 
 class Snapchat(PlatformChecker):
