@@ -11,6 +11,7 @@ import tqdm
 from colorama import Fore, Style, init
 
 from socialscan import util
+from socialscan import __version__
 from socialscan.platforms import Platforms
 
 BAR_WIDTH = 50
@@ -36,6 +37,7 @@ async def main():
     parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available")
     parser.add_argument("--verbose", "-v", action="store_true", help="show response messages for all queries, even if available or unavailable")
     parser.add_argument("--proxy-list", metavar="proxy_list.txt", help="file containing list of proxy servers to execute queries with (ideal for bypassing query restrictions set by platforms)")
+    parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
     args = parser.parse_args()
 
     queries = args.queries
