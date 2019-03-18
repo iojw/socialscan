@@ -16,7 +16,6 @@ from socialscan.platforms import Platforms
 
 BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
-TIMEOUT_PER_QUERY = 1
 DIVIDER = "-"
 DIVIDER_LENGTH = 40
 
