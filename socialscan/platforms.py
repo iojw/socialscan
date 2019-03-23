@@ -5,6 +5,10 @@ from enum import Enum
 import aiohttp
 
 
+class TokenError(Exception):
+    pass
+
+
 class PlatformChecker:
     DEFAULT_HEADERS = {"User-agent": "socialscan 1.0", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
     UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Received unexpected content. You might be sending too many requests. Use a proxy or wait before trying again."
@@ -31,10 +35,14 @@ class PlatformChecker:
         Adds 1-2s to overall running time but halves HTTP requests sent for bulk queries
         """
         if self.prerequest_sent:
+            if self.token is None:
+                raise TokenError(self.TOKEN_ERROR_MESSAGE)
             return self.token
         else:
             self.token = await self.prerequest()
             self.prerequest_sent = True
+            if self.token is None:
+                raise TokenError(self.TOKEN_ERROR_MESSAGE)
             return self.token
 
     def is_taken(self, message):
@@ -137,8 +145,6 @@ class Snapchat(PlatformChecker):
 
     async def check_username(self, username):
         token = await self.get_token()
-        if token is None:
-            return self.response_failure(username, self.TOKEN_ERROR_MESSAGE)
         async with self.post(self.ENDPOINT,
                              data={"requested_username": username, "xsrf_token": token},
                              cookies={'xsrf_token': token}) as r:
@@ -168,8 +174,6 @@ class Instagram(PlatformChecker):
 
     async def check_username(self, username):
         token = await self.get_token()
-        if token is None:
-            return self.response_failure(username, self.TOKEN_ERROR_MESSAGE)
         async with self.post(self.ENDPOINT,
                              data={"username": username},
                              headers={'x-csrftoken': token}) as r:
@@ -186,8 +190,6 @@ class Instagram(PlatformChecker):
 
     async def check_email(self, email):
         token = await self.get_token()
-        if token is None:
-            return self.response_failure(email, self.TOKEN_ERROR_MESSAGE)
         async with self.post(self.ENDPOINT,
                              data={"email": email},
                              headers={'x-csrftoken': token}) as r:
@@ -283,8 +285,6 @@ class Tumblr(PlatformChecker):
     async def _check(self, email=SAMPLE_UNUSED_EMAIL, username=SAMPLE_UNUSED_USERNAME):
         query = email if username == self.SAMPLE_UNUSED_USERNAME else username
         token = await self.get_token()
-        if token is None:
-            return self.response_failure(query, self.TOKEN_ERROR_MESSAGE)
         async with self.post(self.ENDPOINT,
                              data={"action": "signup_account", "form_key": token,
                                    "user[email]": email, "user[password]": self.SAMPLE_PASSWORD, "tumblelog[name]": username}) as r:

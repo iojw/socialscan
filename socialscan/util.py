@@ -2,7 +2,7 @@ import re
 
 import aiohttp
 
-from socialscan.platforms import PlatformResponse, Platforms
+from socialscan.platforms import PlatformResponse, Platforms, TokenError
 
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?)+$")
 
@@ -26,7 +26,7 @@ async def query(platform, query_str, checkers):
             return await checkers[platform].check_email(query_str)
         elif not is_email and "check_username" in platform.value.__dict__:
             return await checkers[platform].check_username(query_str)
-    except (aiohttp.ClientError, KeyError) as e:
+    except (aiohttp.ClientError, KeyError, TokenError) as e:
         response = PlatformResponse(platform=platform,
                                     query=query_str,
                                     available=False,
