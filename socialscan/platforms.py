@@ -439,10 +439,53 @@ class Pinterest(PlatformChecker):
                 return self.response_available(email)
 
 
+class Lastfm(PlatformChecker):
+    URL = "https://www.last.fm/join"
+    ENDPOINT = "https://www.last.fm/join/partial/validate"
+    USERNAME_TAKEN_MSGS = ["Sorry, this username isn't available."]
+
+    prerequest_req = True
+
+    async def prerequest(self):
+        async with self.get(self.URL) as r:
+            if "csrftoken" in r.cookies:
+                token = r.cookies["csrftoken"].value
+                return token
+
+    async def _check(self, username="", email=""):
+        token = await self.get_token()
+        data = {"csrfmiddlewaretoken": token, "userName": username, "email": email}
+        headers = {"Accept": "*/*",
+                   "Referer": "https://www.last.fm/join",
+                   "X-Requested-With": "XMLHttpRequest",
+                   "Cookie": f"csrftoken={token}"}
+        async with self.post(self.ENDPOINT, data=data, headers=headers) as r:
+            if not self.is_json(r):
+                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
+            json_body = await r.json()
+            if email:
+                if json_body["email"]["valid"]:
+                    return self.response_available(email, json_body["email"]["success_message"])
+                else:
+                    return self.response_unavailable(email, json_body["email"]["error_messages"][0])
+            elif username:
+                if json_body["userName"]["valid"]:
+                    return self.response_available(username, json_body["userName"]["success_message"])
+                else:
+                    return self.response_unavailable_or_invalid(username, re.sub('<[^<]+?>', '', json_body["userName"]["error_messages"][0]))
+
+    async def check_email(self, email):
+        return await self._check(email=email)
+
+    async def check_username(self, username):
+        return await self._check(username=username)
+
+
 class Platforms(Enum):
     GITHUB = GitHub
     GITLAB = GitLab
     INSTAGRAM = Instagram
+    LASTFM = Lastfm
     PASTEBIN = Pastebin
     PINTEREST = Pinterest
     REDDIT = Reddit

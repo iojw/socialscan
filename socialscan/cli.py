@@ -36,7 +36,7 @@ async def main():
                                                                                  "(default: all platforms)")
     parser.add_argument("--input", "-i", metavar="input.txt",
                         help="file containg list of queries to execute")
-    parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram & Tumblr) "
+    parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram. Lastfm & Tumblr) "
                         " - this marginally increases runtime but halves the total number of requests")
     parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available and not in use")
     parser.add_argument("--verbose", "-v", action="store_true", help="show queries and response messages as they are received")
@@ -81,7 +81,7 @@ async def main():
         for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), disable=args.verbose, leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
             response = await future
             if response and args.verbose:
-                print(f"Checked {response.query: <25} on {response.platform.value.__name__:<10}: {response.message}")
+                print(f"Checked {response.query: ^25} on {response.platform.value.__name__:<10}: {response.message}")
             if response and (args.available_only and response.available or not args.available_only):
                 results[response.query].append(response)
         if args.verbose:

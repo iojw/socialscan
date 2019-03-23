@@ -13,6 +13,7 @@ The following platforms are currently supported:
 | Twitter   |     ✔️    |   ✔️   |
 |  GitHub   |     ✔️    |   ✔️   |
 |   Tumblr  |     ✔️    |   ✔️   |
+|  Last.fm  |     ✔️    |   ✔️   |
 |  Snapchat |     ✔️    |         |
 | GitLab    |     ✔️    |         |
 | Reddit    |     ✔️    |         |
@@ -61,7 +62,7 @@ socialscan's implementation solves these problems, while also adding support for
 usage: socialscan [list of usernames/email addresses to check]
 
 Command-line interface for checking username and email address usage on online
-platforms: GitHub, GitLab, Instagram, Pastebin, Pinterest, Reddit, Snapchat,
+platforms: GitHub, GitLab, Instagram, Lastfm, Pastebin, Pinterest, Reddit, Snapchat,
 Twitter, Tumblr
 
 optional arguments:
@@ -71,7 +72,7 @@ optional arguments:
   --input input.txt, -i input.txt
                         file containg list of queries to execute
   --cache-tokens, -c    cache tokens for platforms requiring more than one
-                        HTTP request (Snapchat, GitHub, Instagram & Tumblr) -
+                        HTTP request (Snapchat, GitHub, Instagram, Lastfm & Tumblr) -
                         this marginally increases runtime but halves the total
                         number of requests
   --available-only, -a  only print usernames/email addresses that are
