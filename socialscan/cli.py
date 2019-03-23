@@ -8,7 +8,8 @@ from operator import attrgetter
 
 import aiohttp
 import tqdm
-from colorama import Fore, Style, init
+import colorama
+from colorama import Fore, Style
 
 from socialscan import util
 from socialscan import __version__
@@ -18,11 +19,15 @@ BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
 DIVIDER = "-"
 DIVIDER_LENGTH = 40
+COLOUR_AVAILABLE = (Fore.LIGHTGREEN_EX, Fore.LIGHTGREEN_EX)
+COLOUR_UNAVAILABLE = (Fore.YELLOW, Fore.WHITE)
+COLOUR_INVALID = (Fore.CYAN, Fore.WHITE)
+COLOUR_ERROR = (Fore.RED, Fore.RED)
 
 
 async def main():
     start_time = time.time()
-    init(autoreset=True)
+    colorama.init(autoreset=True)
     sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description="Command-line interface for checking email address and username usage on online platforms: " + ", ".join(p.value.__name__ for p in Platforms))
     parser.add_argument("queries", metavar="query", nargs="*",
@@ -34,7 +39,7 @@ async def main():
     parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram & Tumblr) "
                         " - this marginally increases runtime but halves the total number of requests")
     parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available and not in use")
-    parser.add_argument("--verbose", "-v", action="store_true", help="show response messages for all queries regardless of result")
+    parser.add_argument("--verbose", "-v", action="store_true", help="show queries and response messages as they are received")
     parser.add_argument("--proxy-list", metavar="proxy_list.txt", help="file containing list of proxy servers to execute queries with (useful for bypassing rate limits set by platforms)")
     parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
     args = parser.parse_args()
@@ -73,10 +78,14 @@ async def main():
             await asyncio.gather(*(util.init_prerequest(platform, checkers) for platform in platforms))
             print(end="\r")
         platform_queries = [util.query(p, query, checkers) for query in queries for p in platforms]
-        for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
+        for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), disable=args.verbose, leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
             response = await future
+            if response and args.verbose:
+                print(f"Checked {response.query: <25} on {response.platform.value.__name__:<10}: {response.message}")
             if response and (args.available_only and response.available or not args.available_only):
                 results[response.query].append(response)
+        if args.verbose:
+            print()
         for query in queries:
             responses = results[query]
             result_count += len(responses)
@@ -88,25 +97,22 @@ async def main():
             responses.sort(key=attrgetter('available', 'valid', "success"), reverse=True)
             for response in responses:
                 if not response.success:
-                    col = Fore.RED
-                    print(col + f"{response.platform.value.__name__}: {response.message}", file=sys.stderr)
+                    print(COLOUR_ERROR[0] + f"{response.platform.value.__name__}: {response.message}", file=sys.stderr)
                 else:
                     if response.available:
-                        name_col = message_col = Fore.LIGHTGREEN_EX
+                        col = COLOUR_AVAILABLE
                     elif not response.valid:
-                        name_col = Fore.CYAN
-                        message_col = Fore.WHITE
+                        col = COLOUR_INVALID
                     else:
-                        name_col = Fore.YELLOW
-                        message_col = Fore.WHITE
-                    result_text = name_col + response.platform.value.__name__
-                    if not response.valid or args.verbose:
-                        result_text += f": {message_col + response.message}"
+                        col = COLOUR_UNAVAILABLE
+                    result_text = col[0] + response.platform.value.__name__
+                    if not response.valid:
+                        result_text += f": {col[1] + response.message}"
                     print(result_text)
 
     print(*exceptions, sep="\n", file=sys.stderr)
-    print(Fore.LIGHTGREEN_EX + "Available, ", end="")
-    print(Fore.YELLOW + "Taken/Reserved, ", end="")
-    print(Fore.CYAN + "Invalid, ", end="")
-    print(Fore.RED + "Error")
+    print(COLOUR_AVAILABLE[0] + "Available, ", end="")
+    print(COLOUR_UNAVAILABLE[0] + "Taken/Reserved, ", end="")
+    print(COLOUR_INVALID[0] + "Invalid, ", end="")
+    print(COLOUR_ERROR[0] + "Error")
     print("Completed {} queries in {:.2f}s".format(result_count, time.time() - start_time))

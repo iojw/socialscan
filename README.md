@@ -1,9 +1,9 @@
 # socialscan
 [![Build Status](https://travis-ci.com/iojw/socialscan.svg?token=4yLRbSuqAQqrjanbzeXs&branch=master)](https://travis-ci.com/iojw/socialscan)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
-[![Python 3.6+](https://img.shields.io/badge/python-3.6+-green.svg)](https://www.python.org/downloads/)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-green.svg)](https://www.python.org/downloads/)
 
-socialscan offers **accurate** and **fast** queries for whether email addresses and usernames are available/taken on social media platforms.
+socialscan offers **accurate** and **fast** queries for whether email addresses and usernames are available or taken on social media platforms.
 
 The following platforms are currently supported:   
 
@@ -27,18 +27,18 @@ The following platforms are currently supported:
 
 Other similar tools check username availability by requesting the profile page of the username in question and based on information like the HTTP status code or error text on the requested page, determine whether a username is already taken. This is a naive approach that fails in the following cases:
 
-- Reserved keywords: Most platforms have a set of keywords that they don't allow to be used in usernames (admin, home, etc.)  
-(A simple test: try checking reserved words like 'admin' or 'home' and see if other services mark them as available.)
+- Reserved keywords: Most platforms have a set of keywords that they don't allow to be used in usernames  
+(A simple test: try checking reserved words like 'admin' or 'home' or 'root' and see if other services mark them as available.)
 
 - Deleted/banned accounts: Deleted/banned account usernames tend to be unavailable even though the profile pages might not exist
 
-Therefore, these tools are not always be accurate. The method of checking used also cannot be extended to include email addresses.
+Therefore, these tools tend to come up with false positives and negatives. This method of checking also cannot be extended to email addresses.
 
-socialscan provides an implementation that solves these problems, adding support for email addresses as well.
+socialscan's implementation solves these problems, while also adding support for email addresses.
 
 ## Features
 
-1. **100% accuracy**: Rather than scanning profile pages, socialscan queries the registration servers of the platforms, retrieving the appropriate CSFR tokens, headers, and cookies. This eliminates all false positives/negatives, ensuring that all results are accurate.
+1. **100% accuracy**: Rather than scanning profile pages, socialscan queries the registration servers of the platforms directly, retrieving the appropriate CSFR tokens, headers, and cookies. This eliminates all false positives/negatives, ensuring that all results are accurate.
 
 2. **Speed**: socialscan uses [asyncio](https://docs.python.org/3/library/asyncio.html) along with [aiohttp](https://aiohttp.readthedocs.io/en/stable/) to conduct all queries concurrently, resulting in very quick searching even with bulk queries
 
@@ -58,7 +58,7 @@ socialscan provides an implementation that solves these problems, adding support
 
 ## Usage
 ```
-usage: socialscan [list of usernames/email address to check]
+usage: socialscan [list of usernames/email addresses to check]
 
 Command-line interface for checking username and email address usage on online
 platforms: GitHub, GitLab, Instagram, Pastebin, Pinterest, Reddit, Snapchat,
@@ -87,9 +87,9 @@ optional arguments:
 
 ## Contributing
 
-Errors, suggestions or want a site added? [Submit an issue](https://github.com/iojw/socialscan/issues) and I'll reply as soon as I can. 
+Errors, suggestions or want a site added? [Submit an issue](https://github.com/iojw/socialscan/issues). 
 
-PRs are welcome!
+PRs are always welcome 🙂
 
 ## License
 MIT
