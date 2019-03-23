@@ -10,7 +10,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='socialscan',
     version=__version__,
-    description='Accurately check if email addresses and usernames are available or taken on social media platforms',
+    description='Accurately check email address and username usage on online platforms',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/iojw/socialscan',
