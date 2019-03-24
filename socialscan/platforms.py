@@ -5,7 +5,7 @@ from enum import Enum
 import aiohttp
 
 
-class TokenError(Exception):
+class QueryError(Exception):
     pass
 
 
@@ -36,13 +36,13 @@ class PlatformChecker:
         """
         if self.prerequest_sent:
             if self.token is None:
-                raise TokenError(self.TOKEN_ERROR_MESSAGE)
+                raise QueryError(self.TOKEN_ERROR_MESSAGE)
             return self.token
         else:
             self.token = await self.prerequest()
             self.prerequest_sent = True
             if self.token is None:
-                raise TokenError(self.TOKEN_ERROR_MESSAGE)
+                raise QueryError(self.TOKEN_ERROR_MESSAGE)
             return self.token
 
     def is_taken(self, message):
@@ -481,6 +481,21 @@ class Lastfm(PlatformChecker):
         return await self._check(username=username)
 
 
+class Spotify(PlatformChecker):
+    URL = "https://www.spotify.com/signup/"
+    EMAIL_ENDPOINT = "https://www.spotify.com/sg-en/xhr/json/isEmailAvailable.php"
+
+    async def check_email(self, email):
+        async with self.get(self.EMAIL_ENDPOINT, params={"signup_form[email]": email, "email": email}) as r:
+            text = await r.text()
+            if text == "true":
+                return self.response_available(email)
+            elif text == "false":
+                return self.response_unavailable(email)
+            else:
+                return self.response_failure(email, self.TOO_MANY_REQUEST_ERROR_MESSAGE)
+
+
 class Platforms(Enum):
     GITHUB = GitHub
     GITLAB = GitLab
@@ -490,6 +505,7 @@ class Platforms(Enum):
     PINTEREST = Pinterest
     REDDIT = Reddit
     SNAPCHAT = Snapchat
+    SPOTIFY = Spotify
     TWITTER = Twitter
     TUMBLR = Tumblr
 
