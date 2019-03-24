@@ -19,9 +19,11 @@ class PlatformChecker:
     client_timeout = aiohttp.ClientTimeout(connect=TIMEOUT_DURATION)
     prerequest_req = False
 
+    # 1: Be as explicit as possible in handling all cases
+    # 2: Do not include any queries that will lead to side-effects on users (e.g. submitting sign up forms)
     async def prerequest(self):
         pass
-
+   
     async def check_username(self, username):
         pass
 
@@ -149,11 +151,12 @@ class Snapchat(PlatformChecker):
                              data={"requested_username": username, "xsrf_token": token},
                              cookies={'xsrf_token': token}) as r:
             if not self.is_json(r):
+                # Too many requests
                 return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
             if "error_message" in json_body["reference"]:
                 return self.response_unavailable_or_invalid(username, json_body["reference"]["error_message"])
-            else:
+            elif json_body["reference"]["status_code"] == "OK":
                 return self.response_available(username)
 
     # Email: Snapchat doesn't associate email addresses with accounts
@@ -294,12 +297,12 @@ class Tumblr(PlatformChecker):
             if username == query:
                 if "usernames" in json_body or len(json_body["errors"]) > 0:
                     return self.response_unavailable_or_invalid(query, json_body["errors"][0])
-                else:
+                elif json_body["errors"] == []:
                     return self.response_available(query)
             elif email == query:
                 if "This email address is already in use." in json_body["errors"]:
                     return self.response_unavailable(query, json_body["errors"][0])
-                else:
+                elif json_body["errors"] == []:
                     return self.response_available(query)
 
     async def check_username(self, username):
@@ -319,6 +322,7 @@ class GitLab(PlatformChecker):
             return self.response_invalid(username, "Please create a username with only alphanumeric characters.")
         async with self.get(self.ENDPOINT.format(username),
                             headers={"X-Requested-With": "XMLHttpRequest"}) as r:
+            # Special case for usernames
             if r.status == 401:
                 return self.response_unavailable(username)
             if not self.is_json(r):
@@ -344,9 +348,11 @@ class Reddit(PlatformChecker):
             if not self.is_json(r):
                 return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
             json_body = await r.json()
-            if "json" in json_body:
+            if "error" in json_body and json_body["error"] == 429:
+                return self.response_failure(username, self.TOO_MANY_REQUEST_ERROR_MESSAGE)  
+            elif "json" in json_body:
                 return self.response_unavailable_or_invalid(username, json_body["json"]["errors"][0][1])
-            else:
+            elif json_body == {}:
                 return self.response_available(username)
 
     # Email: You can register multiple Reddit accounts under the same email address so not possible to check if an address is in use
