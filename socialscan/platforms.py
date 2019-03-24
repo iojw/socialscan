@@ -11,7 +11,7 @@ class QueryError(Exception):
 
 class PlatformChecker:
     DEFAULT_HEADERS = {"User-agent": "socialscan 1.0", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
-    UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Received unexpected content. You might be sending too many requests. Use a proxy or wait before trying again."
+    UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Unexpected content type {}. You might be sending too many requests. Use a proxy or wait before trying again."
     TOKEN_ERROR_MESSAGE = "Could not retrieve token. You might be sending too many requests. Use a proxy or wait before trying again."
     TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Use a proxy or wait before trying again."
     TIMEOUT_DURATION = 20
@@ -23,7 +23,7 @@ class PlatformChecker:
     # 2: Do not include any queries that will lead to side-effects on users (e.g. submitting sign up forms)
     async def prerequest(self):
         pass
-   
+
     async def check_username(self, username):
         pass
 
@@ -108,12 +108,11 @@ class PlatformChecker:
         return self._request("GET", url, **kwargs)
 
     @staticmethod
-    def content_type(request):
-        return request.headers["Content-Type"]
-
-    @staticmethod
-    def is_json(request):
-        return request.headers["Content-Type"].startswith("application/json")
+    async def get_json(request):
+        if not request.headers["Content-Type"].startswith("application/json"):
+            raise QueryError(PlatformChecker.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE.format(request.headers["Content-Type"]))
+        else:
+            return await request.json()
 
     def __init__(self, session, proxy_list=[]):
         self.session = session
@@ -150,10 +149,8 @@ class Snapchat(PlatformChecker):
         async with self.post(self.ENDPOINT,
                              data={"requested_username": username, "xsrf_token": token},
                              cookies={'xsrf_token': token}) as r:
-            if not self.is_json(r):
-                # Too many requests
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            # Non-JSON received if too many requests
+            json_body = await self.get_json(r)
             if "error_message" in json_body["reference"]:
                 return self.response_unavailable_or_invalid(username, json_body["reference"]["error_message"])
             elif json_body["reference"]["status_code"] == "OK":
@@ -180,9 +177,7 @@ class Instagram(PlatformChecker):
         async with self.post(self.ENDPOINT,
                              data={"username": username},
                              headers={'x-csrftoken': token}) as r:
-            if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             # Too many requests
             if json_body["status"] == "fail":
                 return self.response_failure(username, json_body["message"])
@@ -196,9 +191,7 @@ class Instagram(PlatformChecker):
         async with self.post(self.ENDPOINT,
                              data={"email": email},
                              headers={'x-csrftoken': token}) as r:
-            if not self.is_json(r):
-                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             # Too many requests
             if json_body["status"] == "fail":
                 return self.response_failure(email, json_body["message"])
@@ -291,9 +284,7 @@ class Tumblr(PlatformChecker):
         async with self.post(self.ENDPOINT,
                              data={"action": "signup_account", "form_key": token,
                                    "user[email]": email, "user[password]": self.SAMPLE_PASSWORD, "tumblelog[name]": username}) as r:
-            if not self.is_json(r):
-                return self.response_failure(query, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             if username == query:
                 if "usernames" in json_body or len(json_body["errors"]) > 0:
                     return self.response_unavailable_or_invalid(query, json_body["errors"][0])
@@ -325,9 +316,7 @@ class GitLab(PlatformChecker):
             # Special case for usernames
             if r.status == 401:
                 return self.response_unavailable(username)
-            if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             if json_body["exists"]:
                 return self.response_unavailable(username)
             else:
@@ -345,11 +334,9 @@ class Reddit(PlatformChecker):
         # Custom user agent required to overcome rate limits for Reddit API
         async with self.post(self.ENDPOINT,
                              data={"user": username}) as r:
-            if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             if "error" in json_body and json_body["error"] == 429:
-                return self.response_failure(username, self.TOO_MANY_REQUEST_ERROR_MESSAGE)  
+                return self.response_failure(username, self.TOO_MANY_REQUEST_ERROR_MESSAGE)
             elif "json" in json_body:
                 return self.response_unavailable_or_invalid(username, json_body["json"]["errors"][0][1])
             elif json_body == {}:
@@ -368,9 +355,7 @@ class Twitter(PlatformChecker):
     async def check_username(self, username):
         async with self.get(self.USERNAME_ENDPOINT,
                             params={"username": username}) as r:
-            if not self.is_json(r):
-                return self.response_failure(username, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             message = json_body["desc"]
             if json_body["valid"]:
                 return self.response_available(username, message)
@@ -380,9 +365,7 @@ class Twitter(PlatformChecker):
     async def check_email(self, email):
         async with self.get(self.EMAIL_ENDPOINT,
                             params={"email": email}) as r:
-            if not self.is_json(r):
-                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             message = json_body["msg"]
             if not json_body["valid"] and not json_body["taken"]:
                 return self.response_invalid(email, message)
@@ -435,9 +418,7 @@ class Pinterest(PlatformChecker):
     async def check_email(self, email):
         data = '{"options": {"email": "%s"}, "context": {}}' % email
         async with self.get(self.EMAIL_ENDPOINT, params={"source_url": "/", "data": data}) as r:
-            if not self.is_json(r):
-                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             email_exists = json_body["resource_response"]["data"]
             if email_exists:
                 return self.response_unavailable(email)
@@ -466,9 +447,7 @@ class Lastfm(PlatformChecker):
                    "X-Requested-With": "XMLHttpRequest",
                    "Cookie": f"csrftoken={token}"}
         async with self.post(self.ENDPOINT, data=data, headers=headers) as r:
-            if not self.is_json(r):
-                return self.response_failure(email, self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE)
-            json_body = await r.json()
+            json_body = await self.get_json(r)
             if email:
                 if json_body["email"]["valid"]:
                     return self.response_available(email, json_body["email"]["success_message"])
