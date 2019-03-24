@@ -37,7 +37,7 @@ async def main():
     parser.add_argument("--input", "-i", metavar="input.txt",
                         help="file containg list of queries to execute")
     parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram. Lastfm & Tumblr) "
-                        " - this marginally increases runtime but halves the total number of requests")
+                        " - this marginally increases runtime but halves the total number of requests for bulk queries")
     parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available and not in use")
     parser.add_argument("--verbose", "-v", action="store_true", help="show queries and response messages as they are received")
     parser.add_argument("--proxy-list", metavar="proxy_list.txt", help="file containing list of proxy servers to execute queries with (useful for bypassing rate limits set by platforms)")
