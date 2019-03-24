@@ -4,13 +4,15 @@ from enum import Enum
 
 import aiohttp
 
+from socialscan import __version__
+
 
 class QueryError(Exception):
     pass
 
 
 class PlatformChecker:
-    DEFAULT_HEADERS = {"User-agent": "socialscan 1.0", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
+    DEFAULT_HEADERS = {"User-agent": f"socialscan {__version__}", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
     UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Unexpected content type {}. You might be sending too many requests. Use a proxy or wait before trying again."
     TOKEN_ERROR_MESSAGE = "Could not retrieve token. You might be sending too many requests. Use a proxy or wait before trying again."
     TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Use a proxy or wait before trying again."
