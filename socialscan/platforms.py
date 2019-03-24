@@ -347,7 +347,7 @@ class Reddit(PlatformChecker):
 
 class Twitter(PlatformChecker):
     URL = "https://twitter.com/signup",
-    USERNAME_ENDPOINT = "https://twitter.com/users/username_available"
+    USERNAME_ENDPOINT = "https://api.twitter.com/i/users/username_available.json"
     EMAIL_ENDPOINT = "https://api.twitter.com/i/users/email_available.json"
     # [account in use, account suspended]
     USERNAME_TAKEN_MSGS = ["That username has been taken", "unavailable"]
