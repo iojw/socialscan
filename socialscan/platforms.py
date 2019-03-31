@@ -16,7 +16,7 @@ class PlatformChecker:
     UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Unexpected content type {}. You might be sending too many requests. Use a proxy or wait before trying again."
     TOKEN_ERROR_MESSAGE = "Could not retrieve token. You might be sending too many requests. Use a proxy or wait before trying again."
     TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Use a proxy or wait before trying again."
-    TIMEOUT_DURATION = 20
+    TIMEOUT_DURATION = 15
 
     client_timeout = aiohttp.ClientTimeout(connect=TIMEOUT_DURATION)
     prerequest_req = False
@@ -496,8 +496,14 @@ class Platforms(Enum):
     TWITTER = Twitter
     TUMBLR = Tumblr
 
+    def __str__(self):
+        return self.value.__name__
 
-@dataclass
+    def __len__(self):
+        return len(self.value.__name__)
+
+
+@dataclass(frozen=True)
 class PlatformResponse:
     platform: Platforms
     query: str

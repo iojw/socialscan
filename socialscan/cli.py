@@ -34,13 +34,14 @@ async def main():
                         help="one or more usernames/email addresses to query (email addresses are automatically be queried if they match the format)")
     parser.add_argument("--platforms", "-p", metavar="platform", nargs="*", help="list of platforms to query "
                                                                                  "(default: all platforms)")
-    parser.add_argument("--input", "-i", metavar="input.txt",
-                        help="file containg list of queries to execute")
+    parser.add_argument("--view-by", dest="view_key", choices=["platform", "query"], default="query")
+    parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available and not in use")
     parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram. Lastfm & Tumblr) "
                         " - this marginally increases runtime but halves the total number of requests for bulk queries")
-    parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available and not in use")
-    parser.add_argument("--verbose", "-v", action="store_true", help="show queries and response messages as they are received")
-    parser.add_argument("--proxy-list", metavar="proxy_list.txt", help="file containing list of proxy servers to execute queries with (useful for bypassing rate limits set by platforms)")
+    parser.add_argument("--input", "-i", metavar="input.txt",
+                        help="file containg list of queries to execute")
+    parser.add_argument("--proxy-list", metavar="proxy_list.txt", help="file containing list of HTTP proxy servers to execute queries with")
+    parser.add_argument("--verbose", "-v", action="store_true", help="show query responses messages as they are received")
     parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
     args = parser.parse_args()
 
@@ -50,7 +51,7 @@ async def main():
             for line in f:
                 queries.append(line.strip("\n"))
     if not args.queries:
-        raise ValueError("you must specify either at least one query or an input file")
+        raise ValueError("You must specify either at least one query or an input file")
     queries = list(dict.fromkeys(queries))
     if args.platforms:
         platforms = []
@@ -66,12 +67,17 @@ async def main():
         with open(args.proxy_list, "r") as f:
             for line in f:
                 proxy_list.append(line.strip("\n"))
+    if args.view_key == "query":
+        view_value = "platform"
+        key_iter = queries
+    elif args.view_key == "platform":
+        view_value = "query"
+        key_iter = Platforms
 
     async with aiohttp.ClientSession() as session:
         checkers = util.init_checkers(session, proxy_list=proxy_list)
-        results = defaultdict(list)
+        all_results = defaultdict(list)
         result_count = 0
-        exceptions = []
 
         if args.cache_tokens:
             print("Caching tokens...", end="")
@@ -79,39 +85,41 @@ async def main():
             print(end="\r")
         platform_queries = [util.query(p, query, checkers) for query in queries for p in platforms]
         for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), disable=args.verbose, leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
-            response = await future
-            if response and args.verbose:
-                print(f"Checked {response.query: ^25} on {response.platform.value.__name__:<10}: {response.message}")
-            if response and (args.available_only and response.available or not args.available_only):
-                results[response.query].append(response)
+            platform_response = await future
+            if platform_response and args.verbose:
+                print(f"Checked {platform_response.query: ^25} on {platform_response.platform.value.__name__:<10}: {platform_response.message}")
+            if platform_response and (args.available_only and platform_response.available or not args.available_only):
+                all_results[getattr(platform_response, args.view_key)].append(platform_response)
         if args.verbose:
             print()
-        for query in queries:
-            responses = results[query]
+        # TODO: add help text for this option
+        for key in key_iter:
+            responses = all_results[key]
             result_count += len(responses)
             header = (f"{DIVIDER * DIVIDER_LENGTH}\n"
-                      f"{' ' * (DIVIDER_LENGTH // 2 - len(query) // 2) + Style.BRIGHT + query + Style.RESET_ALL}\n"
+                      f"{' ' * (DIVIDER_LENGTH // 2 - len(key) // 2) + Style.BRIGHT + str(key) + Style.RESET_ALL}\n"
                       f"{DIVIDER * DIVIDER_LENGTH}")
-            print(header)
-            responses.sort(key=attrgetter('platform.name'))
+            if not (args.available_only and responses == [] or args.view_key == "platform" and responses == []):
+                print(header)
+            responses.sort(key=lambda platform_response: str(getattr(platform_response, view_value)).lower())
             responses.sort(key=attrgetter('available', 'valid', "success"), reverse=True)
-            for response in responses:
-                if not response.success:
-                    print(COLOUR_ERROR[0] + f"{response.platform.value.__name__}: {response.message}", file=sys.stderr)
+            for platform_response in responses:
+                value = getattr(platform_response, view_value)
+                if not platform_response.success:
+                    print(COLOUR_ERROR[0] + f"{value}: {platform_response.message}", file=sys.stderr)
                 else:
-                    if response.available:
+                    if platform_response.available:
                         col = COLOUR_AVAILABLE
-                    elif not response.valid:
+                    elif not platform_response.valid:
                         col = COLOUR_INVALID
                     else:
                         col = COLOUR_UNAVAILABLE
-                    result_text = col[0] + response.platform.value.__name__
-                    if not response.valid:
-                        result_text += f": {col[1] + response.message}"
+                    result_text = f"{col[0]}{value}"
+                    if not platform_response.valid:
+                        result_text += f": {col[1]}{platform_response.message}"
                     print(result_text)
 
-    print(*exceptions, sep="\n", file=sys.stderr)
-    print(COLOUR_AVAILABLE[0] + "Available, ", end="")
+    print("\n" + COLOUR_AVAILABLE[0] + "Available, ", end="")
     print(COLOUR_UNAVAILABLE[0] + "Taken/Reserved, ", end="")
     print(COLOUR_INVALID[0] + "Invalid, ", end="")
     print(COLOUR_ERROR[0] + "Error")
