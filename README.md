@@ -22,9 +22,10 @@ The following platforms are currently supported:
 | Pinterest |            |   ✔️   |
 |  Spotify  |            |   ✔️   |
 
-<a href="https://asciinema.org/a/N3SDS7krILW0YA6NisLxrxqkV">
+<p>
 <img src="https://github.com/iojw/socialscan/raw/master/demo/demo.gif" width="700" height="469"/>
-</a>
+<img src="https://github.com/iojw/socialscan/raw/master/demo/demo100.gif" width="700" height="469"/>
+</p>
 
 ## Background
 
@@ -35,16 +36,15 @@ Other similar tools check username availability by requesting the profile page o
 
 - Deleted/banned accounts: Deleted/banned account usernames tend to be unavailable even though the profile pages might not exist
 
-These tools therefore tend to come up with false positives and negatives. This method of checking also cannot be extended to email addresses.
+Therefore, these tools tend to come up with false positives and negatives. This method of checking also cannot be extended to email addresses or platforms which don't use traditional profile pages.
 
-socialscan's implementation aims to plug these gaps.
+socialscan aims to plug these gaps.
 
 ## Features
 
 1. **100% accuracy**: Rather than scanning profile pages, socialscan queries the registration servers of the platforms directly, retrieving the appropriate CSRF tokens, headers, and cookies. This eliminates all false positives/negatives, ensuring that results are accurate.
 
-2. **Speed**: socialscan uses [asyncio](https://docs.python.org/3/library/asyncio.html) along with [aiohttp](https://aiohttp.readthedocs.io/en/stable/) to conduct all queries concurrently, resulting in very quick searching even with bulk queries. e.g. checking 100 emails/usernames on all platforms, socialscan completes all queries in <15s, processing over ~1k HTTP requests in that time.
-#include this?
+2. **Speed**: socialscan uses [asyncio](https://docs.python.org/3/library/asyncio.html) along with [aiohttp](https://aiohttp.readthedocs.io/en/stable/) to conduct all queries concurrently, resulting in very quick searching even with bulk queries.
 
 ## Installation
 
@@ -68,19 +68,20 @@ optional arguments:
   -h, --help            show this help message and exit
   --platforms [platform [platform ...]], -p [platform [platform ...]]
                         list of platforms to query (default: all platforms)
-  --input input.txt, -i input.txt
-                        file containg list of queries to execute
-  --cache-tokens, -c    cache tokens for platforms requiring more than one
-                        HTTP request - this marginally increases runtime 
-                        but halves the total number of requests for bulk queries
+  --view-by {platform,query}
+                        view results sorted by platform or by query (default:
+                        query)
   --available-only, -a  only print usernames/email addresses that are
                         available and not in use
-  --verbose, -v         show response messages for all queries regardless of
-                        result
+  --cache-tokens, -c    cache tokens for platforms requiring more than one
+                        HTTP request (Snapchat, GitHub, Instagram. Lastfm &
+                        Tumblr), reducing total number of requests sent
+  --input input.txt, -i input.txt
+                        file containg list of queries to execute
   --proxy-list proxy_list.txt
-                        file containing list of proxy servers to execute
-                        queries with (useful for bypassing rate limits set by
-                        platforms)
+                        file containing list of HTTP proxy servers to execute
+                        queries with
+  --verbose, -v         show query responses as they are received
   --version             show program's version number and exit
 ```
 

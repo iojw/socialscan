@@ -34,14 +34,13 @@ async def main():
                         help="one or more usernames/email addresses to query (email addresses are automatically be queried if they match the format)")
     parser.add_argument("--platforms", "-p", metavar="platform", nargs="*", help="list of platforms to query "
                                                                                  "(default: all platforms)")
-    parser.add_argument("--view-by", dest="view_key", choices=["platform", "query"], default="query")
+    parser.add_argument("--view-by", dest="view_key", choices=["platform", "query"], default="query", help="view results sorted by platform or by query (default: query)")
     parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available and not in use")
-    parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram. Lastfm & Tumblr) "
-                        " - this marginally increases runtime but halves the total number of requests for bulk queries")
+    parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram. Lastfm & Tumblr), reducing total number of requests sent")
     parser.add_argument("--input", "-i", metavar="input.txt",
                         help="file containg list of queries to execute")
     parser.add_argument("--proxy-list", metavar="proxy_list.txt", help="file containing list of HTTP proxy servers to execute queries with")
-    parser.add_argument("--verbose", "-v", action="store_true", help="show query responses messages as they are received")
+    parser.add_argument("--verbose", "-v", action="store_true", help="show query responses as they are received")
     parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
     args = parser.parse_args()
 
@@ -92,7 +91,6 @@ async def main():
                 all_results[getattr(platform_response, args.view_key)].append(platform_response)
         if args.verbose:
             print()
-        # TODO: add help text for this option
         for key in key_iter:
             responses = all_results[key]
             result_count += len(responses)

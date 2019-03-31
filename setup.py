@@ -32,7 +32,7 @@ class PyTest(TestCommand):
 setup(
     name='socialscan',
     version=__version__,
-    description='Accurately check email address and username usage on online platforms',
+    description='CLI and library for checking email address and username usage on online platforms',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/iojw/socialscan',
