@@ -295,6 +295,8 @@ class Tumblr(PlatformChecker):
             elif email == query:
                 if "This email address is already in use." in json_body["errors"]:
                     return self.response_unavailable(query, json_body["errors"][0])
+                elif "This email address isn't correct. Please try again." in json_body["errors"]:
+                    return self.response_invalid(query, json_body["errors"][0])
                 elif json_body["errors"] == []:
                     return self.response_available(query)
 
