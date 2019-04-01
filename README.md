@@ -22,10 +22,8 @@ The following platforms are currently supported:
 | Pinterest |            |   ✔️   |
 |  Spotify  |            |   ✔️   |
 
-<p>
-<img src="https://github.com/iojw/socialscan/raw/master/demo/demo.gif" width="700" height="469"/>
-<img src="https://github.com/iojw/socialscan/raw/master/demo/demo100.gif" width="700" height="469"/>
-</p>
+![](https://github.com/iojw/socialscan/raw/master/demo/demo.gif)
+![](https://github.com/iojw/socialscan/raw/master/demo/demo100.gif)
 
 ## Background
 
