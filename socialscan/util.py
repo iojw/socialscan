@@ -22,12 +22,12 @@ def init_checkers(session, proxy_list=[]):
 async def query(platform, query_str, checkers):
     try:
         is_email = EMAIL_REGEX.match(query_str)
-        if is_email and "check_email" in platform.value.__dict__:
+        if is_email and hasattr(platform.value, "check_email"):
             response = await checkers[platform].check_email(query_str)
             if response is None:
                 raise QueryError("Error retrieving result")
             return response
-        elif not is_email and "check_username" in platform.value.__dict__:
+        elif not is_email and hasattr(platform.value, "check_username"):
             response = await checkers[platform].check_username(query_str)
             if response is None:
                 raise QueryError("Error retrieving result")

@@ -21,16 +21,9 @@ class PlatformChecker:
     client_timeout = aiohttp.ClientTimeout(connect=TIMEOUT_DURATION)
     prerequest_req = False
 
+    # Subclasses can implement 3 methods depending on requirements: prerequest(), check_username() and check_email()
     # 1: Be as explicit as possible in handling all cases
     # 2: Do not include any queries that will lead to side-effects on users (e.g. submitting sign up forms)
-    async def prerequest(self):
-        pass
-
-    async def check_username(self, username):
-        pass
-
-    async def check_email(self, email):
-        pass
 
     async def get_token(self):
         """

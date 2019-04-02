@@ -30,7 +30,7 @@ def assert_invalid(response: PlatformResponse):
     assert response.success
 
 
-@pytest.mark.parametrize('platform', [p for p in Platforms if "check_username" in p.value.__dict__])
+@pytest.mark.parametrize('platform', [p for p in Platforms if hasattr(p.value, "check_username")])
 @pytest.mark.parametrize('usernames, assert_function', [(AVAILABLE_USERNAMES, assert_available),
                                                         (UNAVAILABLE_USERNAMES, assert_unavailable),
                                                         (INVALID_USERNAMES, assert_invalid)])
@@ -40,7 +40,7 @@ def test_usernames(platform, usernames, assert_function):
         assert_function(response)
 
 
-@pytest.mark.parametrize('platform', [p for p in Platforms if "check_email" in p.value.__dict__])
+@pytest.mark.parametrize('platform', [p for p in Platforms if hasattr(p.value, "check_email")])
 @pytest.mark.parametrize('emails, assert_function', [(UNUSED_EMAILS, assert_available),
                                                      (USED_EMAILS, assert_unavailable)])
 def test_emails(platform, emails, assert_function):
