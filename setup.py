@@ -50,7 +50,7 @@ setup(
     keywords='email email-checker username username-checker social-media',
     packages=['socialscan'],
     python_requires='>=3.7',
-    install_requires=['colorama', 'aiohttp', 'tqdm'],
+    install_requires=['colorama', 'aiohttp>=3.5.0', 'tqdm>=4.31.0'],
     tests_require=['pytest'],
     cmdclass={"test": PyTest},
     entry_points={
