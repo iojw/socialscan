@@ -34,7 +34,7 @@ Other similar tools check username availability by requesting the profile page o
 
 - Deleted/banned accounts: Deleted/banned account usernames tend to be unavailable even though the profile pages might not exist
 
-Therefore, these tools tend to come up with false positives and negatives. This method of checking also cannot be extended to email addresses or platforms which don't use traditional profile pages.
+Therefore, these tools tend to come up with false positives and negatives. This method of checking is also dependent on platforms having web-based profile pages and cannot be extended to email addresses.
 
 socialscan aims to plug these gaps.
 
@@ -84,39 +84,30 @@ optional arguments:
 ```
 
 ## As a library
+socialscan can also be imported into existing code and used as a library. 
 
-socialscan can also be imported into existing code and used as a library.
+v1.0.0 introduces the async method `execute_queries` and the corresponding synchronous wrapper `sync_execute_queries` that takes a list of queries and optional list of platforms and proxies, executing all queries concurrently. The method then returns a list of results in the same order.
 
-
-Executing single queries:
 ```python
-import asyncio
+from socialscan.util import Platforms, sync_execute_queries
 
-from socialscan.util import Platforms, query_without_checkers
-
-result = asyncio.run(query_without_checkers(Platforms.GITHUB, "username1"))
-print(f"Success: {result.success}, Valid: {result.valid}, Available: {result.available}")
+queries = ["username1", "email2@gmail.com", "mail42@me.com"]
+platforms = [Platforms.GITHUB, Platforms.LASTFM]
+results = sync_execute_queries(queries, platforms)
+for result in results:
+    print(f"{result.query} on {result.platform}: {result.message} (Success: {result.success}, Valid: {result.valid}, Available: {result.available})")
 ```
-Executing multiple queries concurrently requires a bit more setup:
-```python
-import asyncio
-import aiohttp
-from socialscan.util import Platforms, init_checkers, query
-
-async def execute_queries():
-    async with aiohttp.ClientSession() as session:
-        checkers = init_checkers(session)
-        platforms = [Platforms.GITHUB, Platforms.LASTFM]
-        queries = ["username1", "email2@gmail.com", "email3@me.com"]
-        query_tasks = [query(p, q, checkers) for q in queries for p in platforms]
-        results = await asyncio.gather(*query_tasks)
-        for result in results:
-            print(f"{result.query} on {result.platform.name}: Success: {result.success}, Valid: {result.valid}, Available: {result.available}")
-
-asyncio.run(execute_queries())
+Output:
 ```
+username1 on GitHub: Username is already taken (Success: True, Valid: True, Available: False)
+username1 on Lastfm: Sorry, this username isn't available. (Success: True, Valid: True, Available: False)
+email2@gmail.com on GitHub: Available (Success: True, Valid: True, Available: True)
+email2@gmail.com on Lastfm: Sorry, that email address is already registered to another account. (Success: True, Valid: True, Available: False)
+mail42@me.com on GitHub: Available (Success: True, Valid: True, Available: True)
+mail42@me.com on Lastfm: Looking good! (Success: True, Valid: True, Available: True)
+```
+
 ## Contributing
-
 Errors, suggestions or want a site added? [Submit an issue](https://github.com/iojw/socialscan/issues). 
 
 PRs are always welcome 🙂
