@@ -9,7 +9,7 @@ EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-
 
 
 async def init_prerequest(platform, checkers):
-    if platform.value.prerequest_req:
+    if hasattr(platform.value, "prerequest"):
         await checkers[platform].get_token()
 
 

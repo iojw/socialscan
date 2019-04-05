@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 import argparse
 import asyncio
 import sys
@@ -17,8 +16,9 @@ from socialscan.util import init_checkers, init_prerequest, query
 
 BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
-DIVIDER = "-"
+
 DIVIDER_LENGTH = 40
+
 COLOUR_AVAILABLE = (Fore.LIGHTGREEN_EX, Fore.LIGHTGREEN_EX)
 COLOUR_UNAVAILABLE = (Fore.YELLOW, Fore.WHITE)
 COLOUR_INVALID = (Fore.CYAN, Fore.WHITE)
@@ -94,9 +94,9 @@ async def main():
         for key in key_iter:
             responses = all_results[key]
             result_count += len(responses)
-            header = (f"{DIVIDER * DIVIDER_LENGTH}\n"
+            header = (f"{'-' * DIVIDER_LENGTH}\n"
                       f"{' ' * (DIVIDER_LENGTH // 2 - len(key) // 2) + Style.BRIGHT + str(key) + Style.RESET_ALL}\n"
-                      f"{DIVIDER * DIVIDER_LENGTH}")
+                      f"{'-' * DIVIDER_LENGTH}")
             if not (args.available_only and responses == [] or args.view_key == "platform" and responses == []):
                 print(header)
             responses.sort(key=lambda platform_response: str(getattr(platform_response, view_value)).lower())

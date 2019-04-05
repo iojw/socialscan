@@ -19,7 +19,6 @@ class PlatformChecker:
     TIMEOUT_DURATION = 15
 
     client_timeout = aiohttp.ClientTimeout(connect=TIMEOUT_DURATION)
-    prerequest_req = False
 
     # Subclasses can implement 3 methods depending on requirements: prerequest(), check_username() and check_email()
     # 1: Be as explicit as possible in handling all cases
@@ -27,6 +26,8 @@ class PlatformChecker:
 
     async def get_token(self):
         """
+        Retrieve and return platform token using the `prerequest` method specified in the class
+
         Normal calls will not be able to take advantage of this as all tokens are retrieved concurrently
         This only applies to when tokens are retrieved before main queries with -c
         Adds 1-2s to overall running time but halves HTTP requests sent for bulk queries
@@ -46,40 +47,36 @@ class PlatformChecker:
         return any(x in message for x in self.USERNAME_TAKEN_MSGS)
 
     def response_failure(self, query, message="Failure"):
-        response = PlatformResponse(platform=Platforms(self.__class__),
-                                    query=query,
-                                    available=False,
-                                    valid=False,
-                                    success=False,
-                                    message=message)
-        return response
+        return PlatformResponse(platform=Platforms(self.__class__),
+                                query=query,
+                                available=False,
+                                valid=False,
+                                success=False,
+                                message=message)
 
     def response_available(self, query, message="Available"):
-        response = PlatformResponse(platform=Platforms(self.__class__),
-                                    query=query,
-                                    available=True,
-                                    valid=True,
-                                    success=True,
-                                    message=message)
-        return response
+        return PlatformResponse(platform=Platforms(self.__class__),
+                                query=query,
+                                available=True,
+                                valid=True,
+                                success=True,
+                                message=message)
 
     def response_unavailable(self, query, message="Unavailable"):
-        response = PlatformResponse(platform=Platforms(self.__class__),
-                                    query=query,
-                                    available=False,
-                                    valid=True,
-                                    success=True,
-                                    message=message)
-        return response
+        return PlatformResponse(platform=Platforms(self.__class__),
+                                query=query,
+                                available=False,
+                                valid=True,
+                                success=True,
+                                message=message)
 
     def response_invalid(self, query, message="Invalid"):
-        response = PlatformResponse(platform=Platforms(self.__class__),
-                                    query=query,
-                                    available=False,
-                                    valid=False,
-                                    success=True,
-                                    message=message)
-        return response
+        return PlatformResponse(platform=Platforms(self.__class__),
+                                query=query,
+                                available=False,
+                                valid=False,
+                                success=True,
+                                message=message)
 
     def response_unavailable_or_invalid(self, query, message):
         if self.is_taken(message):
@@ -122,8 +119,6 @@ class Snapchat(PlatformChecker):
     ENDPOINT = "https://accounts.snapchat.com/accounts/get_username_suggestions"
     USERNAME_TAKEN_MSGS = ["is already taken", "is currently unavailable"]
 
-    prerequest_req = True
-
     async def prerequest(self):
         async with self.get(self.URL) as r:
             """
@@ -158,8 +153,6 @@ class Instagram(PlatformChecker):
     URL = "https://instagram.com"
     ENDPOINT = "https://www.instagram.com/accounts/web_create_ajax/attempt/"
     USERNAME_TAKEN_MSGS = ["This username isn't available.", "A user with that username already exists."]
-
-    prerequest_req = True
 
     async def prerequest(self):
         async with self.get(self.URL) as r:
@@ -207,7 +200,6 @@ class GitHub(PlatformChecker):
     # [username taken, reserved keyword (Username __ is unavailable)]
     USERNAME_TAKEN_MSGS = ["Username is already taken", "unavailable"]
 
-    prerequest_req = True
     token_regex = re.compile(r'<auto-check src="/signup_check/username" csrf="([^\s]*)">[\s\S]*<auto-check src="/signup_check/email" csrf="([^\s]*)">')
 
     async def prerequest(self):
@@ -262,8 +254,6 @@ class Tumblr(PlatformChecker):
     SAMPLE_UNUSED_EMAIL = "akc2rW33AuSqQWY8@gmail.com"
     SAMPLE_PASSWORD = "correcthorsebatterystaple"
     SAMPLE_UNUSED_USERNAME = "akc2rW33AuSqQWY8"
-
-    prerequest_req = True
 
     async def prerequest(self):
         async with self.get(self.URL) as r:
@@ -427,8 +417,6 @@ class Lastfm(PlatformChecker):
     URL = "https://www.last.fm/join"
     ENDPOINT = "https://www.last.fm/join/partial/validate"
     USERNAME_TAKEN_MSGS = ["Sorry, this username isn't available."]
-
-    prerequest_req = True
 
     async def prerequest(self):
         async with self.get(self.URL) as r:
