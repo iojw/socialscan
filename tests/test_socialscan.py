@@ -1,7 +1,6 @@
-import asyncio
 import pytest
 
-from socialscan.util import query_without_checkers
+from socialscan.util import sync_execute_queries
 from socialscan.platforms import Platforms, PlatformResponse
 
 AVAILABLE_USERNAMES = ["jsndiwimw"]
@@ -36,7 +35,7 @@ def assert_invalid(response: PlatformResponse):
                                                         (INVALID_USERNAMES, assert_invalid)])
 def test_usernames(platform, usernames, assert_function):
     for username in usernames:
-        response = asyncio.run(query_without_checkers(platform, username))
+        response = sync_execute_queries([username], [platform])[0]
         assert_function(response)
 
 
@@ -45,5 +44,5 @@ def test_usernames(platform, usernames, assert_function):
                                                      (USED_EMAILS, assert_unavailable)])
 def test_emails(platform, emails, assert_function):
     for email in emails:
-        response = asyncio.run(query_without_checkers(platform, email))
+        response = sync_execute_queries([email], [platform])[0]
         assert_function(response)

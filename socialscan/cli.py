@@ -7,13 +7,13 @@ from collections import defaultdict
 from operator import attrgetter
 
 import aiohttp
-import tqdm
 import colorama
+import tqdm
 from colorama import Fore, Style
 
-from socialscan import util
 from socialscan import __version__
 from socialscan.platforms import Platforms
+from socialscan.util import init_checkers, init_prerequest, query
 
 BAR_WIDTH = 50
 BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
@@ -74,15 +74,15 @@ async def main():
         key_iter = Platforms
 
     async with aiohttp.ClientSession() as session:
-        checkers = util.init_checkers(session, proxy_list=proxy_list)
+        checkers = init_checkers(session, proxy_list=proxy_list)
         all_results = defaultdict(list)
         result_count = 0
 
         if args.cache_tokens:
             print("Caching tokens...", end="")
-            await asyncio.gather(*(util.init_prerequest(platform, checkers) for platform in platforms))
+            await asyncio.gather(*(init_prerequest(platform, checkers) for platform in platforms))
             print(end="\r")
-        platform_queries = [util.query(p, query, checkers) for query in queries for p in platforms]
+        platform_queries = [query(q, p, checkers) for q in queries for p in platforms]
         for future in tqdm.tqdm(asyncio.as_completed(platform_queries), total=len(platform_queries), disable=args.verbose, leave=False, ncols=BAR_WIDTH, bar_format=BAR_FORMAT):
             platform_response = await future
             if platform_response and args.verbose:
