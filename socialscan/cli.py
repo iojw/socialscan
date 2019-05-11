@@ -36,7 +36,7 @@ async def main():
                                                                                  "(default: all platforms)")
     parser.add_argument("--view-by", dest="view_key", choices=["platform", "query"], default="query", help="view results sorted by platform or by query (default: query)")
     parser.add_argument("--available-only", "-a", action="store_true", help="only print usernames/email addresses that are available and not in use")
-    parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram. Lastfm & Tumblr), reducing total number of requests sent")
+    parser.add_argument("--cache-tokens", "-c", action="store_true", help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram. Lastfm, Tumblr & Yahoo), reducing total number of requests sent")
     parser.add_argument("--input", "-i", metavar="input.txt",
                         help="file containg list of queries to execute")
     parser.add_argument("--proxy-list", metavar="proxy_list.txt", help="file containing list of HTTP proxy servers to execute queries with")

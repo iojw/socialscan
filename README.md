@@ -15,12 +15,13 @@ The following platforms are currently supported:
 | Twitter   |     ✔️    |   ✔️   |
 |  GitHub   |     ✔️    |   ✔️   |
 |   Tumblr  |     ✔️    |   ✔️   |
-|  Lastfm  |     ✔️    |   ✔️   |
-|  Snapchat |     ✔️    |         |
-| GitLab    |     ✔️    |         |
-| Reddit    |     ✔️    |         |
-| Pinterest |            |   ✔️   |
-|  Spotify  |            |   ✔️   |
+|  Lastfm   |     ✔️    |   ✔️   |
+|  Snapchat |     ✔️    |        |
+| GitLab    |     ✔️    |        |
+| Reddit    |     ✔️    |        |
+|  Yahoo    |     ✔️    |        |
+| Pinterest |            |   ✔️  |
+|  Spotify  |            |   ✔️  |
 
 ![](https://github.com/iojw/socialscan/raw/master/demo/demo.gif)
 ![](https://github.com/iojw/socialscan/raw/master/demo/demo100.gif)

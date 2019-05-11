@@ -466,6 +466,39 @@ class Spotify(PlatformChecker):
                 return self.response_failure(email, self.TOO_MANY_REQUEST_ERROR_MESSAGE)
 
 
+class Yahoo(PlatformChecker):
+    URL = "https://login.yahoo.com/account/create"
+    USERNAME_ENDPOINT = "https://login.yahoo.com/account/module/create?validateField=yid"
+
+    # Modified from Yahoo source
+    error_messages = {"IDENTIFIER_EXISTS": "A Yahoo account already exists with this username.", "RESERVED_WORD_PRESENT": "A reserved word is present in the username", "FIELD_EMPTY": "This is required.", "SOME_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can only use letters, numbers, full stops (‘.’) and underscores (‘_’) in your username", "CANNOT_END_WITH_SPECIAL_CHARACTER": "Your username has to end with a letter or a number", "CANNOT_HAVE_MORE_THAN_ONE_PERIOD": "You can’t have more than one ‘.’ in your username.", "NEED_AT_LEAST_ONE_ALPHA": "Please use at least one letter in your username", "CANNOT_START_WITH_SPECIAL_CHARACTER_OR_NUMBER": "Your username has to start with a letter", "CONSECUTIVE_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can’t have more than one ‘.’ or ‘_’ in a row.", "LENGTH_TOO_SHORT": "That username is too short, please use a longer one.", "LENGTH_TOO_LONG": "That username is too long, please use a shorter one."}
+
+    regex = re.compile(r'v=1&s=([^\s]*)')
+
+    async def prerequest(self):
+        async with self.get(self.URL) as r:
+            if "AS" in r.cookies:
+                match = self.regex.search(r.cookies["AS"].value)
+                if match:
+                    return match.group(1)
+
+    async def check_username(self, username):
+        token = await self.get_token()
+        async with self.post(self.USERNAME_ENDPOINT, 
+                             data={"specId": "yidReg", "acrumb": token, "yid": username},
+                             headers={"X-Requested-With": "XMLHttpRequest"}) as r:
+            json_body = await self.get_json(r)
+            if json_body["errors"][2]["name"] != "yid":
+                return self.response_available(username)
+            else:
+                error = json_body["errors"][2]["error"]
+                error_pretty = self.error_messages.get(error, error.replace("_", " ").capitalize())
+                if error == "IDENTIFIER_EXISTS" or error == "RESERVED_WORD_PRESENT":
+                    return self.response_unavailable(username, error_pretty)
+                else:
+                    return self.response_invalid(username, error_pretty)
+
+
 class Platforms(Enum):
     GITHUB = GitHub
     GITLAB = GitLab
@@ -478,6 +511,7 @@ class Platforms(Enum):
     SPOTIFY = Spotify
     TWITTER = Twitter
     TUMBLR = Tumblr
+    YAHOO = Yahoo
 
     def __str__(self):
         return self.value.__name__
