@@ -484,7 +484,7 @@ class Yahoo(PlatformChecker):
 
     async def check_username(self, username):
         token = await self.get_token()
-        async with self.post(self.USERNAME_ENDPOINT, 
+        async with self.post(self.USERNAME_ENDPOINT,
                              data={"specId": "yidReg", "acrumb": token, "yid": username},
                              headers={"X-Requested-With": "XMLHttpRequest"}) as r:
             json_body = await self.get_json(r)
