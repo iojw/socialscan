@@ -1,8 +1,16 @@
 language: python
 dist: xenial
 python:
-  - "3.7"
+- '3.7'
 install:
-  - python setup.py install
+- python setup.py install
 script:
-  - pytest
+- pytest
+deploy:
+  provider: pypi
+  user: iojw
+  on:
+    tags: true
+  distributions: sdist bdist_wheel
+  password:
+    secure: Rm2vY1fIn7dm0gnVpUIly7l7Pj/9A7pPvCKSQsyewFS+HBx1ni4ZzBke9tUu1sDsInXiUqysSlTPD6L4T1JwdC5Ohotpd8ZKeIphufXOe78st6SB8JpH5ZkWcBr0dHkDbqx6GVLTde/REFNASKUxJIoDPDWqJvhafC7Z5gShGFokpm5WmBnwxaMgU4LrKQrhIykqr/f2EZ1+3ErUFN3zKQZI5yZnAaDukhSMhHusGlAIEUdp9Qu0ip0pH6QLSh4rY1gpFzEwJIM+z7VDaliYmsBVWtBFDzLDz5EuqkgmOnQDudO6S/UFVtIRxod9zp+a0wsMU1EqWxPegtUSFX5PUK6KUQaJ3sr9ZfhXhDwoZIOa6mUjIUszqKs6xToZvqW8cLeqcuvgBxDwEfF1THxackOltPme9bFVB2IYgXDtly4x9g6Mwkwm17lnnCBAv/dlS+aZRNW8rTKGcbijtNB/6GEPzwyz1vCLjnCBA16JIrZQH+mSAT/7GSrAGtzL7Z9/fWTj/Hmj4IZv715ttuxukYkagKzRsIarMGY1UGdM8VMER3UaXFbjOpQRoaV+J0VntknxO8IBKYNGrEAGwxTCXjGjcOgsWM7OE8fjMHP6i4MHe+A+050CHrJBbXQxZvyEkyWeTZ8f5GjBq25jwT+3RPyjPjD8BbA0Mi5AEOvaiSA=
