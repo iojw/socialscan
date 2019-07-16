@@ -198,9 +198,10 @@ class GitHub(PlatformChecker):
     USERNAME_ENDPOINT = "https://github.com/signup_check/username"
     EMAIL_ENDPOINT = "https://github.com/signup_check/email"
     # [username taken, reserved keyword (Username __ is unavailable)]
-    USERNAME_TAKEN_MSGS = ["Username is already taken", "unavailable"]
+    USERNAME_TAKEN_MSGS = ["already taken", "unavailable"]
 
     token_regex = re.compile(r'<auto-check src="/signup_check/username[\S]*" csrf="([\S]*)"[\s\S]*<auto-check src="/signup_check/email[\S]*" csrf="([\S]*)"')
+    tag_regex = re.compile(r'<[^>]+>')
 
     async def prerequest(self):
         async with self.get(self.URL) as r:
@@ -222,6 +223,7 @@ class GitHub(PlatformChecker):
                              cookies=cookies) as r:
             if r.status == 422:
                 text = await r.text()
+                text = self.tag_regex.sub('', text).strip()
                 return self.response_unavailable_or_invalid(username, text)
             elif r.status == 200:
                 return self.response_available(username)
