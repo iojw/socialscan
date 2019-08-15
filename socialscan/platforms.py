@@ -198,7 +198,7 @@ class GitHub(PlatformChecker):
     USERNAME_ENDPOINT = "https://github.com/signup_check/username"
     EMAIL_ENDPOINT = "https://github.com/signup_check/email"
     # [username taken, reserved keyword (Username __ is unavailable)]
-    USERNAME_TAKEN_MSGS = ["already taken", "unavailable"]
+    USERNAME_TAKEN_MSGS = ["already taken", "unavailable", "not available"]
 
     token_regex = re.compile(r'<auto-check src="/signup_check/username[\S]*" csrf="([\S]*)"[\s\S]*<auto-check src="/signup_check/email[\S]*" csrf="([\S]*)"')
     tag_regex = re.compile(r'<[^>]+>')
