@@ -86,9 +86,11 @@ optional arguments:
 ## Input formatting
 Bulk input formatting is as many usernames as you want, separated by a newline. It is done like this:
 e.g
+```
 username1
 username2
 username3
+```
 etc.
 
 
