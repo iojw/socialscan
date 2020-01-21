@@ -53,4 +53,5 @@ venv.bak/
 
 # Files for script debugging
 info/
+deploy_to_pypi.sh
 
