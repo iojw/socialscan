@@ -12,7 +12,7 @@ Features that differentiate socialscan from similar tools (e.g. knowem.com, Name
 
 1. **100% accuracy**: socialscan's query method eliminates the false positives and negatives that often occur in similar tools, ensuring that results are always accurate.
 
-2. **Speed**: socialscan uses [asyncio](https://docs.python.org/3/library/asyncio.html) along with [aiohttp](https://aiohttp.readthedocs.io/en/stable/) to conduct all queries concurrently, providing quick searching even with bulk queries involving hundreds of usernames and email addresses.
+2. **Speed**: socialscan uses [asyncio](https://docs.python.org/3/library/asyncio.html) along with [aiohttp](https://aiohttp.readthedocs.io/en/stable/) to conduct all queries concurrently, providing fast searches even with bulk queries involving hundreds of usernames and email addresses. On a test computer with average specs and Internet speed, 100 queries were executed in ~4 seconds.
 
 3. **Library / CLI**: socialscan can be executed through a CLI, or imported as a Python library to be used with existing code.
 
