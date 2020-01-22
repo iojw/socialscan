@@ -6,7 +6,17 @@
 
 socialscan offers **accurate** and **fast** checks for email address and username usage on online platforms.  
 
-Given an email address or username, socialscan returns whether it is available, taken or invalid on online platforms. Its speed also makes it suitable for bulk queries involving hundreds of usernames and email addresses.
+Given an email address or username, socialscan returns whether it is available, taken or invalid on online platforms. 
+
+Features that differentiate socialscan from similar tools (e.g. knowem.com, Namechk, and Sherlock):
+
+1. **100% accuracy**: socialscan's query method eliminates the false positives and negatives that often occur in similar tools, ensuring that results are always accurate.
+
+2. **Speed**: socialscan uses [asyncio](https://docs.python.org/3/library/asyncio.html) along with [aiohttp](https://aiohttp.readthedocs.io/en/stable/) to conduct all queries concurrently, providing quick searching even with bulk queries involving hundreds of usernames and email addresses.
+
+3. **Library / CLI**: socialscan can be executed through a CLI, or imported as a Python library to be used with existing code.
+
+4. **Email support**: socialscan supports queries for both email addresses and usernames.
 
 The following platforms are currently supported:   
 
@@ -38,13 +48,7 @@ Other similar tools check username availability by requesting the profile page o
 
 Therefore, these tools tend to come up with false positives and negatives. This method of checking is also dependent on platforms having web-based profile pages and cannot be extended to email addresses.
 
-socialscan aims to plug these gaps.
-
-## Features
-
-1. **100% accuracy**: Rather than scanning profile pages, socialscan queries the registration servers of the platforms directly, retrieving the appropriate CSRF tokens, headers, and cookies. This eliminates all false positives/negatives, ensuring that results are accurate.
-
-2. **Speed**: socialscan uses [asyncio](https://docs.python.org/3/library/asyncio.html) along with [aiohttp](https://aiohttp.readthedocs.io/en/stable/) to conduct all queries concurrently, resulting in very quick searching even with bulk queries.
+socialscan aims to plug these gaps by directly querying the registration servers of the platforms instead, retrieving the appropriate CSRF tokens, headers, and cookies. 
 
 ## Installation
 
@@ -84,16 +88,6 @@ optional arguments:
   --verbose, -v         show query responses as they are received
   --version             show program's version number and exit
 ```
-## Input formatting
-Bulk input formatting is as many usernames as you want, separated by a newline. It is done like this:
-e.g
-```
-username1
-username2
-username3
-```
-etc.
-
 
 ## As a library
 socialscan can also be imported into existing code and used as a library. 
@@ -117,6 +111,14 @@ email2@gmail.com on GitHub: Available (Success: True, Valid: True, Available: Tr
 email2@gmail.com on Lastfm: Sorry, that email address is already registered to another account. (Success: True, Valid: True, Available: False)
 mail42@me.com on GitHub: Available (Success: True, Valid: True, Available: True)
 mail42@me.com on Lastfm: Looking good! (Success: True, Valid: True, Available: True)
+```
+
+## Text file input
+For bulk queries with the `--input` option, place one username/email on each line in the .txt file:
+```
+username1
+email2@mail.com
+username3
 ```
 
 ## Contributing
