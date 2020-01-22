@@ -84,6 +84,16 @@ optional arguments:
   --verbose, -v         show query responses as they are received
   --version             show program's version number and exit
 ```
+## Input formatting
+Bulk input formatting is as many usernames as you want, separated by a newline. It is done like this:
+e.g
+```
+username1
+username2
+username3
+```
+etc.
+
 
 ## As a library
 socialscan can also be imported into existing code and used as a library. 
