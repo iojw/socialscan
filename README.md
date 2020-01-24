@@ -127,4 +127,4 @@ Errors, suggestions or want a site added? [Submit an issue](https://github.com/i
 PRs are always welcome 🙂
 
 ## License
-MIT
+MPL 2.0
