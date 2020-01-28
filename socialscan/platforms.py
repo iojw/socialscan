@@ -204,7 +204,7 @@ class GitHub(PlatformChecker):
     # [username taken, reserved keyword (Username __ is unavailable)]
     USERNAME_TAKEN_MSGS = ["already taken", "unavailable", "not available"]
 
-    token_regex = re.compile(r'<auto-check src="/signup_check/username[\s\S]*data-csrf value="([\S]*)"[\s\S]*<auto-check src="/signup_check/email[\s\S]*data-csrf value="([\S]*)"')
+    token_regex = re.compile(r'<auto-check src="/signup_check/username[\s\S]*value="([\S]*)"[\s\S]*<auto-check src="/signup_check/email[\s\S]*value="([\S]*)"[\s\S]*</auto-check>')
     tag_regex = re.compile(r'<[^>]+>')
 
     async def prerequest(self):
