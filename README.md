@@ -121,6 +121,15 @@ email2@mail.com
 username3
 ```
 
+## Donations
+
+If you find this tool useful and would like to support its continued development, you can donate here. Thank you for your support.
+
+[![Donate Via PayPal](https://www.paypal.com/en_US/i/btn/btn_donate_LG.gif)](https://paypal.me/isaacong)
+
+BTC: bc1qwrnukyc6xh9aygu5ps2geh8stmvagsj5u4v7j6  
+ETH: 0x45a0F91666391078eA521A6123559E49DAb1275f
+
 ## Contributing
 Errors, suggestions or want a site added? [Submit an issue](https://github.com/iojw/socialscan/issues). 
 
