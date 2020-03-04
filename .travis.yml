@@ -4,8 +4,9 @@ python:
 - '3.7'
 install:
 - python setup.py install
+- pip install tox-travis
 script:
-- pytest -v
+- tox
 deploy:
   provider: pypi
   user: iojw

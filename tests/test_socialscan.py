@@ -3,6 +3,8 @@ import pytest
 from socialscan.util import sync_execute_queries
 from socialscan.platforms import Platforms, PlatformResponse
 
+TIMEOUT_DURATION = 25 # in seconds
+
 AVAILABLE_USERNAMES = ["jsndiwimw"]
 UNAVAILABLE_USERNAMES = ["social"]
 INVALID_USERNAMES = ["*"]
@@ -33,6 +35,7 @@ def assert_invalid(response: PlatformResponse):
 @pytest.mark.parametrize('usernames, assert_function', [(AVAILABLE_USERNAMES, assert_available),
                                                         (UNAVAILABLE_USERNAMES, assert_unavailable),
                                                         (INVALID_USERNAMES, assert_invalid)])
+@pytest.mark.timeout(TIMEOUT_DURATION)
 def test_usernames(platform, usernames, assert_function):
     for username in usernames:
         response = sync_execute_queries([username], [platform])[0]
@@ -42,6 +45,7 @@ def test_usernames(platform, usernames, assert_function):
 @pytest.mark.parametrize('platform', [p for p in Platforms if hasattr(p.value, "check_email")])
 @pytest.mark.parametrize('emails, assert_function', [(UNUSED_EMAILS, assert_available),
                                                      (USED_EMAILS, assert_unavailable)])
+@pytest.mark.timeout(TIMEOUT_DURATION)
 def test_emails(platform, emails, assert_function):
     for email in emails:
         response = sync_execute_queries([email], [platform])[0]
