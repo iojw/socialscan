@@ -13,7 +13,7 @@ install_requires = [
     'tqdm>=4.31.0'
 ]
 
-tests_requires = ["pytest>=4.4.0", "flake8", "pytest-xdist"]
+tests_requires = ["tox", "flake8"]
 
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
