@@ -10,7 +10,9 @@ import aiohttp
 
 from socialscan.platforms import PlatformResponse, Platforms, QueryError
 
-EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?)+$")
+EMAIL_REGEX = re.compile(
+    r"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?)+$"
+)
 
 
 async def init_prerequest(platform, checkers):
@@ -39,12 +41,14 @@ async def query(query_, platform, checkers):
                 raise QueryError("Error retrieving result")
             return response
     except (aiohttp.ClientError, KeyError, QueryError) as e:
-        return PlatformResponse(platform=platform,
-                                query=query_,
-                                available=False,
-                                valid=False,
-                                success=False,
-                                message=f"{type(e).__name__} - {e}")
+        return PlatformResponse(
+            platform=platform,
+            query=query_,
+            available=False,
+            valid=False,
+            success=False,
+            message=f"{type(e).__name__} - {e}",
+        )
 
 
 async def execute_queries(queries, platforms=list(Platforms), proxy_list=[]):
@@ -76,11 +80,8 @@ def sync_execute_queries(queries, platforms=list(Platforms), proxy_list=[]):
     Returns:
         `list` of `PlatformResponse` objects in the same order as the list of queries and platforms passed.
     """
-
     if sys.version_info >= (3, 7):
         return asyncio.run(execute_queries(queries, platforms, proxy_list))
     else:
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(execute_queries(queries, platforms, proxy_list))
-
-

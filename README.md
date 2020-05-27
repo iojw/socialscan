@@ -135,5 +135,7 @@ Errors, suggestions or want a site added? [Submit an issue](https://github.com/i
 
 PRs are always welcome 🙂
 
+Please ensure that the code is formatted with `black` using the config in `pyproject.toml` before submitting a PR. 
+
 ## License
 MPL 2.0

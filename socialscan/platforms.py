@@ -16,7 +16,10 @@ class QueryError(Exception):
 
 
 class PlatformChecker:
-    DEFAULT_HEADERS = {"User-agent": f"socialscan {__version__}", "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"}
+    DEFAULT_HEADERS = {
+        "User-agent": f"socialscan {__version__}",
+        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+    }
     UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Unexpected content type {}. You might be sending too many requests. Use a proxy or wait before trying again."
     TOKEN_ERROR_MESSAGE = "Could not retrieve token. You might be sending too many requests. Use a proxy or wait before trying again."
     TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Use a proxy or wait before trying again."
@@ -51,36 +54,44 @@ class PlatformChecker:
         return any(x in message for x in self.USERNAME_TAKEN_MSGS)
 
     def response_failure(self, query, message="Failure"):
-        return PlatformResponse(platform=Platforms(self.__class__),
-                                query=query,
-                                available=False,
-                                valid=False,
-                                success=False,
-                                message=message)
+        return PlatformResponse(
+            platform=Platforms(self.__class__),
+            query=query,
+            available=False,
+            valid=False,
+            success=False,
+            message=message,
+        )
 
     def response_available(self, query, message="Available"):
-        return PlatformResponse(platform=Platforms(self.__class__),
-                                query=query,
-                                available=True,
-                                valid=True,
-                                success=True,
-                                message=message)
+        return PlatformResponse(
+            platform=Platforms(self.__class__),
+            query=query,
+            available=True,
+            valid=True,
+            success=True,
+            message=message,
+        )
 
     def response_unavailable(self, query, message="Unavailable"):
-        return PlatformResponse(platform=Platforms(self.__class__),
-                                query=query,
-                                available=False,
-                                valid=True,
-                                success=True,
-                                message=message)
+        return PlatformResponse(
+            platform=Platforms(self.__class__),
+            query=query,
+            available=False,
+            valid=True,
+            success=True,
+            message=message,
+        )
 
     def response_invalid(self, query, message="Invalid"):
-        return PlatformResponse(platform=Platforms(self.__class__),
-                                query=query,
-                                available=False,
-                                valid=False,
-                                success=True,
-                                message=message)
+        return PlatformResponse(
+            platform=Platforms(self.__class__),
+            query=query,
+            available=False,
+            valid=False,
+            success=True,
+            message=message,
+        )
 
     def response_unavailable_or_invalid(self, query, message):
         if self.is_taken(message):
@@ -89,7 +100,9 @@ class PlatformChecker:
             return self.response_invalid(query, message)
 
     def _request(self, method, url, **kwargs):
-        proxy = self.proxy_list[self.request_count % len(self.proxy_list)] if self.proxy_list else None
+        proxy = (
+            self.proxy_list[self.request_count % len(self.proxy_list)] if self.proxy_list else None
+        )
         self.request_count += 1
         if "headers" in kwargs:
             kwargs["headers"].update(self.DEFAULT_HEADERS)
@@ -106,7 +119,11 @@ class PlatformChecker:
     @staticmethod
     async def get_json(request):
         if not request.headers["Content-Type"].startswith("application/json"):
-            raise QueryError(PlatformChecker.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE.format(request.headers["Content-Type"]))
+            raise QueryError(
+                PlatformChecker.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE.format(
+                    request.headers["Content-Type"]
+                )
+            )
         else:
             return await request.json()
 
@@ -140,13 +157,17 @@ class Snapchat(PlatformChecker):
 
     async def check_username(self, username):
         token = await self.get_token()
-        async with self.post(self.ENDPOINT,
-                             data={"requested_username": username, "xsrf_token": token},
-                             cookies={'xsrf_token': token}) as r:
+        async with self.post(
+            self.ENDPOINT,
+            data={"requested_username": username, "xsrf_token": token},
+            cookies={"xsrf_token": token},
+        ) as r:
             # Non-JSON received if too many requests
             json_body = await self.get_json(r)
             if "error_message" in json_body["reference"]:
-                return self.response_unavailable_or_invalid(username, json_body["reference"]["error_message"])
+                return self.response_unavailable_or_invalid(
+                    username, json_body["reference"]["error_message"]
+                )
             elif json_body["reference"]["status_code"] == "OK":
                 return self.response_available(username)
 
@@ -156,7 +177,10 @@ class Snapchat(PlatformChecker):
 class Instagram(PlatformChecker):
     URL = "https://instagram.com"
     ENDPOINT = "https://www.instagram.com/accounts/web_create_ajax/attempt/"
-    USERNAME_TAKEN_MSGS = ["This username isn't available.", "A user with that username already exists."]
+    USERNAME_TAKEN_MSGS = [
+        "This username isn't available.",
+        "A user with that username already exists.",
+    ]
 
     async def prerequest(self):
         async with self.get(self.URL) as r:
@@ -166,23 +190,25 @@ class Instagram(PlatformChecker):
 
     async def check_username(self, username):
         token = await self.get_token()
-        async with self.post(self.ENDPOINT,
-                             data={"username": username},
-                             headers={'x-csrftoken': token}) as r:
+        async with self.post(
+            self.ENDPOINT, data={"username": username}, headers={"x-csrftoken": token}
+        ) as r:
             json_body = await self.get_json(r)
             # Too many requests
             if json_body["status"] == "fail":
                 return self.response_failure(username, json_body["message"])
             if "username" in json_body["errors"]:
-                return self.response_unavailable_or_invalid(username, json_body["errors"]["username"][0]["message"])
+                return self.response_unavailable_or_invalid(
+                    username, json_body["errors"]["username"][0]["message"]
+                )
             else:
                 return self.response_available(username)
 
     async def check_email(self, email):
         token = await self.get_token()
-        async with self.post(self.ENDPOINT,
-                             data={"email": email},
-                             headers={'x-csrftoken': token}) as r:
+        async with self.post(
+            self.ENDPOINT, data={"email": email}, headers={"x-csrftoken": token}
+        ) as r:
             json_body = await self.get_json(r)
             # Too many requests
             if json_body["status"] == "fail":
@@ -204,8 +230,10 @@ class GitHub(PlatformChecker):
     # [username taken, reserved keyword (Username __ is unavailable)]
     USERNAME_TAKEN_MSGS = ["already taken", "unavailable", "not available"]
 
-    token_regex = re.compile(r'<auto-check src="/signup_check/username[\s\S]*value="([\S]*)"[\s\S]*<auto-check src="/signup_check/email[\s\S]*value="([\S]*)"[\s\S]*</auto-check>')
-    tag_regex = re.compile(r'<[^>]+>')
+    token_regex = re.compile(
+        r'<auto-check src="/signup_check/username[\s\S]*value="([\S]*)"[\s\S]*<auto-check src="/signup_check/email[\s\S]*value="([\S]*)"[\s\S]*</auto-check>'
+    )
+    tag_regex = re.compile(r"<[^>]+>")
 
     async def prerequest(self):
         async with self.get(self.URL) as r:
@@ -219,12 +247,14 @@ class GitHub(PlatformChecker):
     async def check_username(self, username):
         pr = await self.get_token()
         (username_token, _, cookies) = pr
-        async with self.post(self.USERNAME_ENDPOINT,
-                             data={"value": username, "authenticity_token": username_token},
-                             cookies=cookies) as r:
+        async with self.post(
+            self.USERNAME_ENDPOINT,
+            data={"value": username, "authenticity_token": username_token},
+            cookies=cookies,
+        ) as r:
             if r.status == 422:
                 text = await r.text()
-                text = self.tag_regex.sub('', text).strip()
+                text = self.tag_regex.sub("", text).strip()
                 return self.response_unavailable_or_invalid(username, text)
             elif r.status == 200:
                 return self.response_available(username)
@@ -237,9 +267,11 @@ class GitHub(PlatformChecker):
             return self.response_failure(email, self.TOKEN_ERROR_MESSAGE)
         else:
             (_, email_token, cookies) = pr
-        async with self.post(self.EMAIL_ENDPOINT,
-                             data={"value": email, "authenticity_token": email_token},
-                             cookies=cookies) as r:
+        async with self.post(
+            self.EMAIL_ENDPOINT,
+            data={"value": email, "authenticity_token": email_token},
+            cookies=cookies,
+        ) as r:
             if r.status == 422:
                 text = await r.text()
                 return self.response_unavailable(email, text)
@@ -252,7 +284,11 @@ class GitHub(PlatformChecker):
 class Tumblr(PlatformChecker):
     URL = "https://tumblr.com/register"
     ENDPOINT = "https://www.tumblr.com/svc/account/register"
-    USERNAME_TAKEN_MSGS = ["That's a good one, but it's taken", "Someone beat you to that username", "Try something else, that one is spoken for"]
+    USERNAME_TAKEN_MSGS = [
+        "That's a good one, but it's taken",
+        "Someone beat you to that username",
+        "Try something else, that one is spoken for",
+    ]
 
     SAMPLE_UNUSED_EMAIL = "akc2rW33AuSqQWY8@gmail.com"
     SAMPLE_PASSWORD = "correcthorsebatterystaple"
@@ -261,7 +297,9 @@ class Tumblr(PlatformChecker):
     async def prerequest(self):
         async with self.get(self.URL) as r:
             text = await r.text()
-            match = re.search(r'<meta name="tumblr-form-key" id="tumblr_form_key" content="([^\s]*)">', text)
+            match = re.search(
+                r'<meta name="tumblr-form-key" id="tumblr_form_key" content="([^\s]*)">', text
+            )
             if match:
                 token = match.group(1)
                 return token
@@ -269,9 +307,16 @@ class Tumblr(PlatformChecker):
     async def _check(self, email=SAMPLE_UNUSED_EMAIL, username=SAMPLE_UNUSED_USERNAME):
         query = email if username == self.SAMPLE_UNUSED_USERNAME else username
         token = await self.get_token()
-        async with self.post(self.ENDPOINT,
-                             data={"action": "signup_account", "form_key": token,
-                                   "user[email]": email, "user[password]": self.SAMPLE_PASSWORD, "tumblelog[name]": username}) as r:
+        async with self.post(
+            self.ENDPOINT,
+            data={
+                "action": "signup_account",
+                "form_key": token,
+                "user[email]": email,
+                "user[password]": self.SAMPLE_PASSWORD,
+                "tumblelog[name]": username,
+            },
+        ) as r:
             json_body = await self.get_json(r)
             if username == query:
                 if "usernames" in json_body or len(json_body["errors"]) > 0:
@@ -294,15 +339,20 @@ class Tumblr(PlatformChecker):
 
 
 class GitLab(PlatformChecker):
-    URL = "https://gitlab.com/users/sign_in",
+    URL = "https://gitlab.com/users/sign_in"
     ENDPOINT = "https://gitlab.com/users/{}/exists"
 
     async def check_username(self, username):
         # Custom matching required as validation is implemented locally and not server-side by GitLab
-        if not re.fullmatch(r"[a-zA-Z0-9_\.][a-zA-Z0-9_\-\.]*[a-zA-Z0-9_\-]|[a-zA-Z0-9_]", username):
-            return self.response_invalid(username, "Please create a username with only alphanumeric characters.")
-        async with self.get(self.ENDPOINT.format(username),
-                            headers={"X-Requested-With": "XMLHttpRequest"}) as r:
+        if not re.fullmatch(
+            r"[a-zA-Z0-9_\.][a-zA-Z0-9_\-\.]*[a-zA-Z0-9_\-]|[a-zA-Z0-9_]", username
+        ):
+            return self.response_invalid(
+                username, "Please create a username with only alphanumeric characters."
+            )
+        async with self.get(
+            self.ENDPOINT.format(username), headers={"X-Requested-With": "XMLHttpRequest"}
+        ) as r:
             # Special case for usernames
             if r.status == 401:
                 return self.response_unavailable(username)
@@ -318,17 +368,21 @@ class GitLab(PlatformChecker):
 class Reddit(PlatformChecker):
     URL = "https://reddit.com"
     ENDPOINT = "https://www.reddit.com/api/check_username.json"
-    USERNAME_TAKEN_MSGS = ["that username is already taken", "that username is taken by a deleted account"]
+    USERNAME_TAKEN_MSGS = [
+        "that username is already taken",
+        "that username is taken by a deleted account",
+    ]
 
     async def check_username(self, username):
         # Custom user agent required to overcome rate limits for Reddit API
-        async with self.post(self.ENDPOINT,
-                             data={"user": username}) as r:
+        async with self.post(self.ENDPOINT, data={"user": username}) as r:
             json_body = await self.get_json(r)
             if "error" in json_body and json_body["error"] == 429:
                 return self.response_failure(username, self.TOO_MANY_REQUEST_ERROR_MESSAGE)
             elif "json" in json_body:
-                return self.response_unavailable_or_invalid(username, json_body["json"]["errors"][0][1])
+                return self.response_unavailable_or_invalid(
+                    username, json_body["json"]["errors"][0][1]
+                )
             elif json_body == {}:
                 return self.response_available(username)
 
@@ -336,15 +390,14 @@ class Reddit(PlatformChecker):
 
 
 class Twitter(PlatformChecker):
-    URL = "https://twitter.com/signup",
+    URL = "https://twitter.com/signup"
     USERNAME_ENDPOINT = "https://api.twitter.com/i/users/username_available.json"
     EMAIL_ENDPOINT = "https://api.twitter.com/i/users/email_available.json"
     # [account in use, account suspended]
     USERNAME_TAKEN_MSGS = ["That username has been taken", "unavailable"]
 
     async def check_username(self, username):
-        async with self.get(self.USERNAME_ENDPOINT,
-                            params={"username": username}) as r:
+        async with self.get(self.USERNAME_ENDPOINT, params={"username": username}) as r:
             json_body = await self.get_json(r)
             message = json_body["desc"]
             if json_body["valid"]:
@@ -353,8 +406,7 @@ class Twitter(PlatformChecker):
                 return self.response_unavailable_or_invalid(username, message)
 
     async def check_email(self, email):
-        async with self.get(self.EMAIL_ENDPOINT,
-                            params={"email": email}) as r:
+        async with self.get(self.EMAIL_ENDPOINT, params={"email": email}) as r:
             json_body = await self.get_json(r)
             message = json_body["msg"]
             if not json_body["valid"] and not json_body["taken"]:
@@ -367,7 +419,7 @@ class Twitter(PlatformChecker):
 
 
 class Pastebin(PlatformChecker):
-    URL = "https://pastebin.com/signup",
+    URL = "https://pastebin.com/signup"
     USERNAME_ENDPOINT = "https://pastebin.com/ajax/check_username.php"
     EMAIL_ENDPOINT = "https://pastebin.com/ajax/check_email.php"
     USERNAME_TAKEN_MSGS = ["Username not available!"]
@@ -375,8 +427,7 @@ class Pastebin(PlatformChecker):
     regex = re.compile(r"^<font color=\"(red|green)\">([^<>]+)<\/font>$")
 
     async def _check(self, query, endpoint, data, is_email):
-        async with self.post(endpoint,
-                             data=data) as r:
+        async with self.post(endpoint, data=data) as r:
             text = await r.text()
             match = self.regex.match(text)
             if not match:
@@ -395,10 +446,20 @@ class Pastebin(PlatformChecker):
                         return self.response_unavailable_or_invalid(query, message)
 
     async def check_username(self, username):
-        return await self._check(username, self.USERNAME_ENDPOINT, data={"action": "check_username", "username": username}, is_email=False)
+        return await self._check(
+            username,
+            self.USERNAME_ENDPOINT,
+            data={"action": "check_username", "username": username},
+            is_email=False,
+        )
 
     async def check_email(self, email):
-        return await self._check(email, self.EMAIL_ENDPOINT, data={"action": "check_email", "username": email}, is_email=True)
+        return await self._check(
+            email,
+            self.EMAIL_ENDPOINT,
+            data={"action": "check_email", "username": email},
+            is_email=True,
+        )
 
 
 class Pinterest(PlatformChecker):
@@ -430,10 +491,12 @@ class Lastfm(PlatformChecker):
     async def _check(self, username="", email=""):
         token = await self.get_token()
         data = {"csrfmiddlewaretoken": token, "userName": username, "email": email}
-        headers = {"Accept": "*/*",
-                   "Referer": "https://www.last.fm/join",
-                   "X-Requested-With": "XMLHttpRequest",
-                   "Cookie": f"csrftoken={token}"}
+        headers = {
+            "Accept": "*/*",
+            "Referer": "https://www.last.fm/join",
+            "X-Requested-With": "XMLHttpRequest",
+            "Cookie": f"csrftoken={token}",
+        }
         async with self.post(self.ENDPOINT, data=data, headers=headers) as r:
             json_body = await self.get_json(r)
             if email:
@@ -443,9 +506,13 @@ class Lastfm(PlatformChecker):
                     return self.response_unavailable(email, json_body["email"]["error_messages"][0])
             elif username:
                 if json_body["userName"]["valid"]:
-                    return self.response_available(username, json_body["userName"]["success_message"])
+                    return self.response_available(
+                        username, json_body["userName"]["success_message"]
+                    )
                 else:
-                    return self.response_unavailable_or_invalid(username, re.sub('<[^<]+?>', '', json_body["userName"]["error_messages"][0]))
+                    return self.response_unavailable_or_invalid(
+                        username, re.sub("<[^<]+?>", "", json_body["userName"]["error_messages"][0])
+                    )
 
     async def check_email(self, email):
         return await self._check(email=email)
@@ -459,7 +526,9 @@ class Spotify(PlatformChecker):
     EMAIL_ENDPOINT = "https://www.spotify.com/sg-en/xhr/json/isEmailAvailable.php"
 
     async def check_email(self, email):
-        async with self.get(self.EMAIL_ENDPOINT, params={"signup_form[email]": email, "email": email}) as r:
+        async with self.get(
+            self.EMAIL_ENDPOINT, params={"signup_form[email]": email, "email": email}
+        ) as r:
             text = await r.text()
             if text == "true":
                 return self.response_available(email)
@@ -474,9 +543,21 @@ class Yahoo(PlatformChecker):
     USERNAME_ENDPOINT = "https://login.yahoo.com/account/module/create?validateField=yid"
 
     # Modified from Yahoo source
-    error_messages = {"IDENTIFIER_EXISTS": "A Yahoo account already exists with this username.", "RESERVED_WORD_PRESENT": "A reserved word is present in the username", "FIELD_EMPTY": "This is required.", "SOME_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can only use letters, numbers, full stops (‘.’) and underscores (‘_’) in your username", "CANNOT_END_WITH_SPECIAL_CHARACTER": "Your username has to end with a letter or a number", "CANNOT_HAVE_MORE_THAN_ONE_PERIOD": "You can’t have more than one ‘.’ in your username.", "NEED_AT_LEAST_ONE_ALPHA": "Please use at least one letter in your username", "CANNOT_START_WITH_SPECIAL_CHARACTER_OR_NUMBER": "Your username has to start with a letter", "CONSECUTIVE_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can’t have more than one ‘.’ or ‘_’ in a row.", "LENGTH_TOO_SHORT": "That username is too short, please use a longer one.", "LENGTH_TOO_LONG": "That username is too long, please use a shorter one."}
+    error_messages = {
+        "IDENTIFIER_EXISTS": "A Yahoo account already exists with this username.",
+        "RESERVED_WORD_PRESENT": "A reserved word is present in the username",
+        "FIELD_EMPTY": "This is required.",
+        "SOME_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can only use letters, numbers, full stops (‘.’) and underscores (‘_’) in your username",
+        "CANNOT_END_WITH_SPECIAL_CHARACTER": "Your username has to end with a letter or a number",
+        "CANNOT_HAVE_MORE_THAN_ONE_PERIOD": "You can’t have more than one ‘.’ in your username.",
+        "NEED_AT_LEAST_ONE_ALPHA": "Please use at least one letter in your username",
+        "CANNOT_START_WITH_SPECIAL_CHARACTER_OR_NUMBER": "Your username has to start with a letter",
+        "CONSECUTIVE_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can’t have more than one ‘.’ or ‘_’ in a row.",
+        "LENGTH_TOO_SHORT": "That username is too short, please use a longer one.",
+        "LENGTH_TOO_LONG": "That username is too long, please use a shorter one.",
+    }
 
-    regex = re.compile(r'v=1&s=([^\s]*)')
+    regex = re.compile(r"v=1&s=([^\s]*)")
 
     async def prerequest(self):
         async with self.get(self.URL) as r:
@@ -487,9 +568,11 @@ class Yahoo(PlatformChecker):
 
     async def check_username(self, username):
         token = await self.get_token()
-        async with self.post(self.USERNAME_ENDPOINT,
-                             data={"specId": "yidReg", "acrumb": token, "yid": username},
-                             headers={"X-Requested-With": "XMLHttpRequest"}) as r:
+        async with self.post(
+            self.USERNAME_ENDPOINT,
+            data={"specId": "yidReg", "acrumb": token, "yid": username},
+            headers={"X-Requested-With": "XMLHttpRequest"},
+        ) as r:
             json_body = await self.get_json(r)
             if json_body["errors"][2]["name"] != "yid":
                 return self.response_available(username)
