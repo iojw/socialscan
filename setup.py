@@ -21,7 +21,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
 setup(
     name="socialscan",
     version=__version__,
-    description="CLI and library for checking email address and username usage on online platforms",
+    description="Open-source intelligence tool for checking email address and username usage on online platforms",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/iojw/socialscan",
@@ -36,6 +36,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     keywords="email email-checker username username-checker social-media",
     packages=["socialscan"],

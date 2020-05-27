@@ -1,8 +1,9 @@
 # socialscan
 [![Build Status](https://travis-ci.com/iojw/socialscan.svg?token=4yLRbSuqAQqrjanbzeXs&branch=master)](https://travis-ci.com/iojw/socialscan)
-[![Downloads](https://pepy.tech/badge/socialscan/month)](https://pepy.tech/project/socialscan/month)
+[![Downloads](https://pepy.tech/badge/socialscan)](https://pepy.tech/project/socialscan/)
 [![MPL 2.0 license](https://img.shields.io/badge/License-MPL%202.0-blue.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-green.svg)](https://www.python.org/downloads/)
+[![Python 3.6+](https://img.shields.io/badge/python-3.6+-green.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 socialscan offers **accurate** and **fast** checks for email address and username usage on online platforms.  
 
