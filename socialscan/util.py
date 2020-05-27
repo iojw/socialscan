@@ -4,6 +4,7 @@
 
 import asyncio
 import re
+import sys
 
 import aiohttp
 
@@ -75,4 +76,11 @@ def sync_execute_queries(queries, platforms=list(Platforms), proxy_list=[]):
     Returns:
         `list` of `PlatformResponse` objects in the same order as the list of queries and platforms passed.
     """
-    return asyncio.run(execute_queries(queries, platforms, proxy_list))
+
+    if sys.version_info >= (3, 7):
+        return asyncio.run(execute_queries(queries, platforms, proxy_list))
+    else:
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(execute_queries(queries, platforms, proxy_list))
+
+
