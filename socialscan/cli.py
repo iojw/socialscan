@@ -35,8 +35,6 @@ async def main():
     colorama.init(autoreset=True)
     if sys.version_info >= (3, 7):
         sys.stdout.reconfigure(encoding="utf-8")
-    else:
-        sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf8", buffering=1)
     parser = argparse.ArgumentParser(
         description="Command-line interface for checking email address and username usage on online platforms: "
         + ", ".join(p.value.__name__ for p in Platforms)
