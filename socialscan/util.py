@@ -48,6 +48,7 @@ async def query(query_, platform, checkers):
             valid=False,
             success=False,
             message=f"{type(e).__name__} - {e}",
+            link=None,
         )
 
 
