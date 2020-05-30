@@ -82,6 +82,11 @@ async def main():
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="show query responses as they are received"
     )
+    parser.add_argument(
+        "--show-urls",
+        action="store_true",
+        help="display profile URLs for usernames on supported platforms (profiles may not exist if usernames are reserved or belong to deleted/banned accounts)",
+    )
     parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
     args = parser.parse_args()
 
@@ -174,9 +179,13 @@ async def main():
                         col = COLOUR_INVALID
                     else:
                         col = COLOUR_UNAVAILABLE
+
                     result_text = f"{col.Primary}{value}"
                     if not platform_response.valid:
                         result_text += f": {col.Secondary}{platform_response.message}"
+                    elif platform_response.link and args.show_urls:
+                        result_text += f"{col.Secondary} - {platform_response.link}"
+
                     print(result_text)
 
     print("\n" + COLOUR_AVAILABLE.Primary + "Available, ", end="")

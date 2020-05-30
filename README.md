@@ -87,6 +87,8 @@ optional arguments:
                         file containing list of HTTP proxy servers to execute
                         queries with
   --verbose, -v         show query responses as they are received
+  --show-urls           display profile URLs for usernames on supported platforms
+                        (profiles may not exist if usernames are reserved or belong to deleted/banned accounts)
   --version             show program's version number and exit
 ```
 
