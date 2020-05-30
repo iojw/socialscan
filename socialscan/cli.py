@@ -6,7 +6,7 @@ import argparse
 import asyncio
 import sys
 import time
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from operator import attrgetter
 
 import aiohttp
@@ -23,10 +23,11 @@ BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed_s:.2f}s]"
 
 DIVIDER_LENGTH = 40
 
-COLOUR_AVAILABLE = (Fore.LIGHTGREEN_EX, Fore.LIGHTGREEN_EX)
-COLOUR_UNAVAILABLE = (Fore.YELLOW, Fore.WHITE)
-COLOUR_INVALID = (Fore.CYAN, Fore.WHITE)
-COLOUR_ERROR = (Fore.RED, Fore.RED)
+Colour = namedtuple("Colour", ["Primary", "Secondary"])
+COLOUR_AVAILABLE = Colour(Fore.LIGHTGREEN_EX, Fore.LIGHTGREEN_EX)
+COLOUR_UNAVAILABLE = Colour(Fore.YELLOW, Fore.WHITE)
+COLOUR_INVALID = Colour(Fore.CYAN, Fore.WHITE)
+COLOUR_ERROR = Colour(Fore.RED, Fore.RED)
 
 
 async def main():
@@ -165,7 +166,8 @@ async def main():
                 value = getattr(platform_response, view_value)
                 if not platform_response.success:
                     print(
-                        COLOUR_ERROR[0] + f"{value}: {platform_response.message}", file=sys.stderr
+                        COLOUR_ERROR.Primary + f"{value}: {platform_response.message}",
+                        file=sys.stderr,
                     )
                 else:
                     if platform_response.available:
@@ -174,13 +176,13 @@ async def main():
                         col = COLOUR_INVALID
                     else:
                         col = COLOUR_UNAVAILABLE
-                    result_text = f"{col[0]}{value}"
+                    result_text = f"{col.Primary}{value}"
                     if not platform_response.valid:
-                        result_text += f": {col[1]}{platform_response.message}"
+                        result_text += f": {col.Secondary}{platform_response.message}"
                     print(result_text)
 
-    print("\n" + COLOUR_AVAILABLE[0] + "Available, ", end="")
-    print(COLOUR_UNAVAILABLE[0] + "Taken/Reserved, ", end="")
-    print(COLOUR_INVALID[0] + "Invalid, ", end="")
-    print(COLOUR_ERROR[0] + "Error")
+    print("\n" + COLOUR_AVAILABLE.Primary + "Available, ", end="")
+    print(COLOUR_UNAVAILABLE.Primary + "Taken/Reserved, ", end="")
+    print(COLOUR_INVALID.Primary + "Invalid, ", end="")
+    print(COLOUR_ERROR.Primary + "Error")
     print("Completed {} queries in {:.2f}s".format(result_count, time.time() - start_time))
