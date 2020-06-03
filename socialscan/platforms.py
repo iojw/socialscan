@@ -646,6 +646,21 @@ class Yahoo(PlatformChecker):
                     return self.response_invalid(username, message=error_pretty)
 
 
+class Firefox(PlatformChecker):
+    URL = "https://accounts.firefox.com/signup"
+    EMAIL_ENDPOINT = "https://api.accounts.firefox.com/v1/account/status"
+
+    async def check_email(self, email):
+        async with self.post(Firefox.EMAIL_ENDPOINT, data={"email": email}) as r:
+            json_body = await self.get_json(r)
+            if "error" in json_body:
+                return self.response_failure(email, message=json_body["message"])
+            elif json_body["exists"]:
+                return self.response_unavailable(email)
+            else:
+                return self.response_available(email)
+
+
 class Platforms(Enum):
     GITHUB = GitHub
     GITLAB = GitLab
@@ -659,6 +674,7 @@ class Platforms(Enum):
     TWITTER = Twitter
     TUMBLR = Tumblr
     YAHOO = Yahoo
+    FIREFOX = Firefox
 
     def __str__(self):
         return self.value.__name__

@@ -34,6 +34,7 @@ The following platforms are currently supported:
 |  Yahoo    |     ✔️    |        |
 | Pinterest |            |   ✔️  |
 |  Spotify  |            |   ✔️  |
+|  Firefox  |            |   ✔️  |
 
 ![](https://github.com/iojw/socialscan/raw/master/demo/demo.gif)
 ![](https://github.com/iojw/socialscan/raw/master/demo/demo100.gif)
