@@ -30,6 +30,7 @@ class PlatformChecker:
     # Subclasses can implement 3 methods depending on requirements: prerequest(), check_username() and check_email()
     # 1: Be as explicit as possible in handling all cases
     # 2: Do not include any queries that will lead to side-effects on users (e.g. submitting sign up forms)
+    # OK to omit checks for whether a key exists when parsing the JSON response. KeyError is handled by the parent coroutine.
 
     async def get_token(self):
         """
@@ -41,17 +42,14 @@ class PlatformChecker:
         """
         if self.prerequest_sent:
             if self.token is None:
-                raise QueryError(self.TOKEN_ERROR_MESSAGE)
+                raise QueryError(PlatformChecker.TOKEN_ERROR_MESSAGE)
             return self.token
         else:
             self.token = await self.prerequest()
             self.prerequest_sent = True
             if self.token is None:
-                raise QueryError(self.TOKEN_ERROR_MESSAGE)
+                raise QueryError(PlatformChecker.TOKEN_ERROR_MESSAGE)
             return self.token
-
-    def is_taken(self, message):
-        return any(x in message for x in self.USERNAME_TAKEN_MSGS)
 
     def response_failure(self, query, *, message="Failure"):
         return PlatformResponse(
@@ -97,8 +95,8 @@ class PlatformChecker:
             link=None,
         )
 
-    def response_unavailable_or_invalid(self, query, *, message, link=None):
-        if self.is_taken(message):
+    def response_unavailable_or_invalid(self, query, *, message, unavailable_messages, link=None):
+        if any(x in message for x in unavailable_messages):
             return self.response_unavailable(query, message=message, link=link)
         else:
             return self.response_invalid(query, message=message)
@@ -109,9 +107,9 @@ class PlatformChecker:
         )
         self.request_count += 1
         if "headers" in kwargs:
-            kwargs["headers"].update(self.DEFAULT_HEADERS)
+            kwargs["headers"].update(PlatformChecker.DEFAULT_HEADERS)
         else:
-            kwargs["headers"] = self.DEFAULT_HEADERS
+            kwargs["headers"] = PlatformChecker.DEFAULT_HEADERS
         return self.session.request(method, url, timeout=self.client_timeout, proxy=proxy, **kwargs)
 
     def post(self, url, **kwargs):
@@ -145,7 +143,7 @@ class Snapchat(PlatformChecker):
     USERNAME_TAKEN_MSGS = ["is already taken", "is currently unavailable"]
 
     async def prerequest(self):
-        async with self.get(self.URL) as r:
+        async with self.get(Snapchat.URL) as r:
             """
             See: https://github.com/aio-libs/aiohttp/issues/3002
             Snapchat sends multiple Set-Cookie headers in its response setting the value of 'xsrf-token',
@@ -162,7 +160,7 @@ class Snapchat(PlatformChecker):
     async def check_username(self, username):
         token = await self.get_token()
         async with self.post(
-            self.ENDPOINT,
+            Snapchat.ENDPOINT,
             data={"requested_username": username, "xsrf_token": token},
             cookies={"xsrf_token": token},
         ) as r:
@@ -170,7 +168,9 @@ class Snapchat(PlatformChecker):
             json_body = await self.get_json(r)
             if "error_message" in json_body["reference"]:
                 return self.response_unavailable_or_invalid(
-                    username, message=json_body["reference"]["error_message"]
+                    username,
+                    message=json_body["reference"]["error_message"],
+                    unavailable_messages=Snapchat.USERNAME_TAKEN_MSGS,
                 )
             elif json_body["reference"]["status_code"] == "OK":
                 return self.response_available(username)
@@ -188,7 +188,7 @@ class Instagram(PlatformChecker):
     USERNAME_LINK_FORMAT = "https://www.instagram.com/{}"
 
     async def prerequest(self):
-        async with self.get(self.URL) as r:
+        async with self.get(Instagram.URL) as r:
             if "csrftoken" in r.cookies:
                 token = r.cookies["csrftoken"].value
                 return token
@@ -196,7 +196,7 @@ class Instagram(PlatformChecker):
     async def check_username(self, username):
         token = await self.get_token()
         async with self.post(
-            self.ENDPOINT, data={"username": username}, headers={"x-csrftoken": token}
+            Instagram.ENDPOINT, data={"username": username}, headers={"x-csrftoken": token}
         ) as r:
             json_body = await self.get_json(r)
             # Too many requests
@@ -206,6 +206,7 @@ class Instagram(PlatformChecker):
                 return self.response_unavailable_or_invalid(
                     username,
                     message=json_body["errors"]["username"][0]["message"],
+                    unavailable_messages=Instagram.USERNAME_TAKEN_MSGS,
                     link=Instagram.USERNAME_LINK_FORMAT.format(username),
                 )
             else:
@@ -214,7 +215,7 @@ class Instagram(PlatformChecker):
     async def check_email(self, email):
         token = await self.get_token()
         async with self.post(
-            self.ENDPOINT, data={"email": email}, headers={"x-csrftoken": token}
+            Instagram.ENDPOINT, data={"email": email}, headers={"x-csrftoken": token}
         ) as r:
             json_body = await self.get_json(r)
             # Too many requests
@@ -244,7 +245,7 @@ class GitHub(PlatformChecker):
     tag_regex = re.compile(r"<[^>]+>")
 
     async def prerequest(self):
-        async with self.get(self.URL) as r:
+        async with self.get(GitHub.URL) as r:
             text = await r.text()
             match = self.token_regex.search(text)
             if match:
@@ -256,7 +257,7 @@ class GitHub(PlatformChecker):
         pr = await self.get_token()
         (username_token, _, cookies) = pr
         async with self.post(
-            self.USERNAME_ENDPOINT,
+            GitHub.USERNAME_ENDPOINT,
             data={"value": username, "authenticity_token": username_token},
             cookies=cookies,
         ) as r:
@@ -264,21 +265,26 @@ class GitHub(PlatformChecker):
                 text = await r.text()
                 text = self.tag_regex.sub("", text).strip()
                 return self.response_unavailable_or_invalid(
-                    username, message=text, link=GitHub.USERNAME_LINK_FORMAT.format(username)
+                    username,
+                    message=text,
+                    unavailable_messages=GitHub.USERNAME_TAKEN_MSGS,
+                    link=GitHub.USERNAME_LINK_FORMAT.format(username),
                 )
             elif r.status == 200:
                 return self.response_available(username)
             elif r.status == 429:
-                return self.response_failure(username, message=self.TOO_MANY_REQUEST_ERROR_MESSAGE)
+                return self.response_failure(
+                    username, message=PlatformChecker.TOO_MANY_REQUEST_ERROR_MESSAGE
+                )
 
     async def check_email(self, email):
         pr = await self.get_token()
         if pr is None:
-            return self.response_failure(email, message=self.TOKEN_ERROR_MESSAGE)
+            return self.response_failure(email, message=PlatformChecker.TOKEN_ERROR_MESSAGE)
         else:
             (_, email_token, cookies) = pr
         async with self.post(
-            self.EMAIL_ENDPOINT,
+            GitHub.EMAIL_ENDPOINT,
             data={"value": email, "authenticity_token": email_token},
             cookies=cookies,
         ) as r:
@@ -288,7 +294,9 @@ class GitHub(PlatformChecker):
             elif r.status == 200:
                 return self.response_available(email)
             elif r.status == 429:
-                return self.response_failure(email, message=self.TOO_MANY_REQUEST_ERROR_MESSAGE)
+                return self.response_failure(
+                    email, message=PlatformChecker.TOO_MANY_REQUEST_ERROR_MESSAGE
+                )
 
 
 class Tumblr(PlatformChecker):
@@ -306,7 +314,7 @@ class Tumblr(PlatformChecker):
     SAMPLE_UNUSED_USERNAME = "akc2rW33AuSqQWY8"
 
     async def prerequest(self):
-        async with self.get(self.URL) as r:
+        async with self.get(Tumblr.URL) as r:
             text = await r.text()
             match = re.search(
                 r'<meta name="tumblr-form-key" id="tumblr_form_key" content="([^\s]*)">', text
@@ -316,15 +324,15 @@ class Tumblr(PlatformChecker):
                 return token
 
     async def _check(self, email=SAMPLE_UNUSED_EMAIL, username=SAMPLE_UNUSED_USERNAME):
-        query = email if username == self.SAMPLE_UNUSED_USERNAME else username
+        query = email if username == Tumblr.SAMPLE_UNUSED_USERNAME else username
         token = await self.get_token()
         async with self.post(
-            self.ENDPOINT,
+            Tumblr.ENDPOINT,
             data={
                 "action": "signup_account",
                 "form_key": token,
                 "user[email]": email,
-                "user[password]": self.SAMPLE_PASSWORD,
+                "user[password]": Tumblr.SAMPLE_PASSWORD,
                 "tumblelog[name]": username,
             },
         ) as r:
@@ -334,6 +342,7 @@ class Tumblr(PlatformChecker):
                     return self.response_unavailable_or_invalid(
                         query,
                         message=json_body["errors"][0],
+                        unavailable_messages=Tumblr.USERNAME_TAKEN_MSGS,
                         link=Tumblr.USERNAME_LINK_FORMAT.format(query),
                     )
                 elif json_body["errors"] == []:
@@ -367,7 +376,7 @@ class GitLab(PlatformChecker):
                 username, message="Please create a username with only alphanumeric characters."
             )
         async with self.get(
-            self.ENDPOINT.format(username), headers={"X-Requested-With": "XMLHttpRequest"}
+            GitLab.ENDPOINT.format(username), headers={"X-Requested-With": "XMLHttpRequest"}
         ) as r:
             # Special case for usernames
             if r.status == 401:
@@ -396,14 +405,17 @@ class Reddit(PlatformChecker):
 
     async def check_username(self, username):
         # Custom user agent required to overcome rate limits for Reddit API
-        async with self.post(self.ENDPOINT, data={"user": username}) as r:
+        async with self.post(Reddit.ENDPOINT, data={"user": username}) as r:
             json_body = await self.get_json(r)
             if "error" in json_body and json_body["error"] == 429:
-                return self.response_failure(username, message=self.TOO_MANY_REQUEST_ERROR_MESSAGE)
+                return self.response_failure(
+                    username, message=PlatformChecker.TOO_MANY_REQUEST_ERROR_MESSAGE
+                )
             elif "json" in json_body:
                 return self.response_unavailable_or_invalid(
                     username,
                     message=json_body["json"]["errors"][0][1],
+                    unavailable_messages=Reddit.USERNAME_TAKEN_MSGS,
                     link=Reddit.USERNAME_LINK_FORMAT.format(username),
                 )
             elif json_body == {}:
@@ -421,18 +433,21 @@ class Twitter(PlatformChecker):
     USERNAME_LINK_FORMAT = "https://twitter.com/{}"
 
     async def check_username(self, username):
-        async with self.get(self.USERNAME_ENDPOINT, params={"username": username}) as r:
+        async with self.get(Twitter.USERNAME_ENDPOINT, params={"username": username}) as r:
             json_body = await self.get_json(r)
             message = json_body["desc"]
             if json_body["valid"]:
                 return self.response_available(username, message=message)
             else:
                 return self.response_unavailable_or_invalid(
-                    username, message=message, link=Twitter.USERNAME_LINK_FORMAT.format(username)
+                    username,
+                    message=message,
+                    unavailable_messages=Twitter.USERNAME_TAKEN_MSGS,
+                    link=Twitter.USERNAME_LINK_FORMAT.format(username),
                 )
 
     async def check_email(self, email):
-        async with self.get(self.EMAIL_ENDPOINT, params={"email": email}) as r:
+        async with self.get(Twitter.EMAIL_ENDPOINT, params={"email": email}) as r:
             json_body = await self.get_json(r)
             message = json_body["msg"]
             if not json_body["valid"] and not json_body["taken"]:
@@ -459,7 +474,7 @@ class Pastebin(PlatformChecker):
             match = self.regex.match(text)
             if not match:
                 return self.response_failure(
-                    query, message=self.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE
+                    query, message=PlatformChecker.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE
                 )
             else:
                 message = match[2]
@@ -473,13 +488,16 @@ class Pastebin(PlatformChecker):
                             return self.response_unavailable(query, message=message)
                     else:
                         return self.response_unavailable_or_invalid(
-                            query, message=message, link=Pastebin.USERNAME_LINK_FORMAT.format(query)
+                            query,
+                            message=message,
+                            unavailable_messages=Pastebin.USERNAME_TAKEN_MSGS,
+                            link=Pastebin.USERNAME_LINK_FORMAT.format(query),
                         )
 
     async def check_username(self, username):
         return await self._check(
             username,
-            self.USERNAME_ENDPOINT,
+            Pastebin.USERNAME_ENDPOINT,
             data={"action": "check_username", "username": username},
             is_email=False,
         )
@@ -487,7 +505,7 @@ class Pastebin(PlatformChecker):
     async def check_email(self, email):
         return await self._check(
             email,
-            self.EMAIL_ENDPOINT,
+            Pastebin.EMAIL_ENDPOINT,
             data={"action": "check_email", "username": email},
             is_email=True,
         )
@@ -499,7 +517,9 @@ class Pinterest(PlatformChecker):
 
     async def check_email(self, email):
         data = '{"options": {"email": "%s"}, "context": {}}' % email
-        async with self.get(self.EMAIL_ENDPOINT, params={"source_url": "/", "data": data}) as r:
+        async with self.get(
+            Pinterest.EMAIL_ENDPOINT, params={"source_url": "/", "data": data}
+        ) as r:
             json_body = await self.get_json(r)
             email_exists = json_body["resource_response"]["data"]
             if email_exists:
@@ -515,7 +535,7 @@ class Lastfm(PlatformChecker):
     USERNAME_LINK_FORMAT = "https://www.last.fm/user/{}"
 
     async def prerequest(self):
-        async with self.get(self.URL) as r:
+        async with self.get(Lastfm.URL) as r:
             if "csrftoken" in r.cookies:
                 token = r.cookies["csrftoken"].value
                 return token
@@ -529,7 +549,7 @@ class Lastfm(PlatformChecker):
             "X-Requested-With": "XMLHttpRequest",
             "Cookie": f"csrftoken={token}",
         }
-        async with self.post(self.ENDPOINT, data=data, headers=headers) as r:
+        async with self.post(Lastfm.ENDPOINT, data=data, headers=headers) as r:
             json_body = await self.get_json(r)
             if email:
                 if json_body["email"]["valid"]:
@@ -549,6 +569,7 @@ class Lastfm(PlatformChecker):
                     return self.response_unavailable_or_invalid(
                         username,
                         message=re.sub("<[^<]+?>", "", json_body["userName"]["error_messages"][0]),
+                        unavailable_messages=Lastfm.USERNAME_TAKEN_MSGS,
                         link=Lastfm.USERNAME_LINK_FORMAT.format(username),
                     )
 
@@ -565,7 +586,7 @@ class Spotify(PlatformChecker):
 
     async def check_email(self, email):
         async with self.get(
-            self.EMAIL_ENDPOINT, params={"signup_form[email]": email, "email": email}
+            Spotify.EMAIL_ENDPOINT, params={"signup_form[email]": email, "email": email}
         ) as r:
             text = await r.text()
             if text == "true":
@@ -573,7 +594,9 @@ class Spotify(PlatformChecker):
             elif text == "false":
                 return self.response_unavailable(email)
             else:
-                return self.response_failure(email, message=self.TOO_MANY_REQUEST_ERROR_MESSAGE)
+                return self.response_failure(
+                    email, message=PlatformChecker.TOO_MANY_REQUEST_ERROR_MESSAGE
+                )
 
 
 class Yahoo(PlatformChecker):
@@ -598,7 +621,7 @@ class Yahoo(PlatformChecker):
     regex = re.compile(r"v=1&s=([^\s]*)")
 
     async def prerequest(self):
-        async with self.get(self.URL) as r:
+        async with self.get(Yahoo.URL) as r:
             if "AS" in r.cookies:
                 match = self.regex.search(r.cookies["AS"].value)
                 if match:
@@ -607,7 +630,7 @@ class Yahoo(PlatformChecker):
     async def check_username(self, username):
         token = await self.get_token()
         async with self.post(
-            self.USERNAME_ENDPOINT,
+            Yahoo.USERNAME_ENDPOINT,
             data={"specId": "yidReg", "acrumb": token, "yid": username},
             headers={"X-Requested-With": "XMLHttpRequest"},
         ) as r:
