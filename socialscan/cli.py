@@ -6,7 +6,7 @@ import argparse
 import asyncio
 import sys
 import time
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from operator import attrgetter
 
 import aiohttp
@@ -30,11 +30,7 @@ COLOUR_INVALID = Colour(Fore.CYAN, Fore.WHITE)
 COLOUR_ERROR = Colour(Fore.RED, Fore.RED)
 
 
-async def main():
-    start_time = time.time()
-    colorama.init(autoreset=True)
-    if sys.version_info >= (3, 7):
-        sys.stdout.reconfigure(encoding="utf-8")
+def init_parser():
     parser = argparse.ArgumentParser(
         description="Command-line interface for checking email address and username usage on online platforms: "
         + ", ".join(p.value.__name__ for p in Platforms)
@@ -88,6 +84,53 @@ async def main():
         help="display profile URLs for usernames on supported platforms (profiles may not exist if usernames are reserved or belong to deleted/banned accounts)",
     )
     parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
+    return parser
+
+
+def pretty_print(results, *, view_value, available_only, show_urls):
+    for key, responses in results.items():
+        if responses == [] and (available_only or view_value == "query"):
+            continue
+
+        header = (
+            f"{'-' * DIVIDER_LENGTH}\n"
+            f"{' ' * (DIVIDER_LENGTH // 2 - len(key) // 2) + Style.BRIGHT + str(key) + Style.RESET_ALL}\n"
+            f"{'-' * DIVIDER_LENGTH}"
+        )
+        print(header)
+
+        responses.sort(key=lambda response: str(getattr(response, view_value)).lower())
+        responses.sort(key=attrgetter("available", "valid", "success"), reverse=True)
+        for response in responses:
+            value = str(getattr(response, view_value))
+            if available_only and not response.available:
+                continue
+            if not response.success:
+                print(COLOUR_ERROR.Primary + f"{value}: {response.message}", file=sys.stderr)
+            elif not response.valid:
+                print(
+                    COLOUR_INVALID.Primary
+                    + f"{value}: {COLOUR_INVALID.Secondary}{response.message}"
+                )
+            else:
+                col = COLOUR_AVAILABLE if response.available else COLOUR_UNAVAILABLE
+                result_text = col.Primary + value
+                if response.link and show_urls:
+                    result_text += col.Secondary + f" - {response.link}"
+                print(result_text)
+
+    print("\n" + COLOUR_AVAILABLE.Primary + "Available, ", end="")
+    print(COLOUR_UNAVAILABLE.Primary + "Taken/Reserved, ", end="")
+    print(COLOUR_INVALID.Primary + "Invalid, ", end="")
+    print(COLOUR_ERROR.Primary + "Error")
+
+
+async def main():
+    start_time = time.time()
+    colorama.init(autoreset=True)
+    if sys.version_info >= (3, 7):
+        sys.stdout.reconfigure(encoding="utf-8")
+    parser = init_parser()
     args = parser.parse_args()
 
     queries = args.queries
@@ -121,9 +164,7 @@ async def main():
 
     async with aiohttp.ClientSession() as session:
         checkers = init_checkers(session, proxy_list=proxy_list)
-        all_results = defaultdict(list)
-        result_count = 0
-
+        results = {key: [] for key in key_iter}
         if args.cache_tokens:
             print("Caching tokens...", end="")
             await asyncio.gather(*(init_prerequest(platform, checkers) for platform in platforms))
@@ -138,58 +179,16 @@ async def main():
             bar_format=BAR_FORMAT,
         ):
             platform_response = await future
-            if platform_response and args.verbose:
+            if platform_response is None:
+                continue
+            if args.verbose:
+                print(platform_response, getattr(platform_response, args.view_key))
                 print(
                     f"Checked {platform_response.query: ^25} on {platform_response.platform.value.__name__:<10}: {platform_response.message}"
                 )
-            if platform_response and (
-                args.available_only and platform_response.available or not args.available_only
-            ):
-                all_results[getattr(platform_response, args.view_key)].append(platform_response)
-        if args.verbose:
-            print()
-        for key in key_iter:
-            responses = all_results[key]
-            result_count += len(responses)
-            header = (
-                f"{'-' * DIVIDER_LENGTH}\n"
-                f"{' ' * (DIVIDER_LENGTH // 2 - len(key) // 2) + Style.BRIGHT + str(key) + Style.RESET_ALL}\n"
-                f"{'-' * DIVIDER_LENGTH}"
-            )
-            if not (
-                (args.available_only and responses == [])
-                or (args.view_key == "platform" and responses == [])
-            ):
-                print(header)
-            responses.sort(
-                key=lambda platform_response: str(getattr(platform_response, view_value)).lower()
-            )
-            responses.sort(key=attrgetter("available", "valid", "success"), reverse=True)
-            for platform_response in responses:
-                value = getattr(platform_response, view_value)
-                if not platform_response.success:
-                    print(
-                        COLOUR_ERROR.Primary + f"{value}: {platform_response.message}",
-                        file=sys.stderr,
-                    )
-                else:
-                    if platform_response.available:
-                        col = COLOUR_AVAILABLE
-                    elif not platform_response.valid:
-                        col = COLOUR_INVALID
-                    else:
-                        col = COLOUR_UNAVAILABLE
+            results[getattr(platform_response, args.view_key)].append(platform_response)
 
-                    result_text = f"{col.Primary}{value}"
-                    if not platform_response.valid:
-                        result_text += f": {col.Secondary}{platform_response.message}"
-                    elif platform_response.link and args.show_urls:
-                        result_text += f"{col.Secondary} - {platform_response.link}"
-
-                    print(result_text)
-
-    print("\n" + COLOUR_AVAILABLE.Primary + "Available, ", end="")
-    print(COLOUR_UNAVAILABLE.Primary + "Taken/Reserved, ", end="")
-    print(COLOUR_INVALID.Primary + "Invalid, ", end="")
-    print(COLOUR_ERROR.Primary + "Error")
-    print("Completed {} queries in {:.2f}s".format(result_count, time.time() - start_time))
+    pretty_print(
+        results, view_value=view_value, available_only=args.available_only, show_urls=args.show_urls
+    )
+    print(f"Completed {len(platform_queries)} queries in {time.time() - start_time:.2f}s")
