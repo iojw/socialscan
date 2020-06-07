@@ -6,7 +6,7 @@ import argparse
 import asyncio
 import sys
 import time
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from operator import attrgetter
 
 import aiohttp
@@ -89,7 +89,7 @@ def init_parser():
 
 def pretty_print(results, *, view_value, available_only, show_urls):
     for key, responses in results.items():
-        if responses == [] and (available_only or view_value == "query"):
+        if available_only and not [r for r in responses if r.available]:
             continue
 
         header = (
@@ -157,14 +157,12 @@ async def main():
                 proxy_list.append(line.strip("\n"))
     if args.view_key == "query":
         view_value = "platform"
-        key_iter = queries
     elif args.view_key == "platform":
         view_value = "query"
-        key_iter = Platforms
 
     async with aiohttp.ClientSession() as session:
         checkers = init_checkers(session, proxy_list=proxy_list)
-        results = {key: [] for key in key_iter}
+        results = defaultdict(list)
         if args.cache_tokens:
             print("Caching tokens...", end="")
             await asyncio.gather(*(init_prerequest(platform, checkers) for platform in platforms))
