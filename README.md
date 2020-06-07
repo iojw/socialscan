@@ -90,6 +90,7 @@ optional arguments:
   --verbose, -v         show query responses as they are received
   --show-urls           display profile URLs for usernames on supported platforms
                         (profiles may not exist if usernames are reserved or belong to deleted/banned accounts)
+  --json json.txt       output results in JSON format to the specified file
   --version             show program's version number and exit
 ```
 

@@ -4,9 +4,11 @@
 
 import argparse
 import asyncio
+import json
 import sys
 import time
 from collections import namedtuple, defaultdict
+from dataclasses import asdict
 from operator import attrgetter
 
 import aiohttp
@@ -15,7 +17,7 @@ import tqdm
 from colorama import Fore, Style
 
 from socialscan import __version__
-from socialscan.platforms import Platforms
+from socialscan.platforms import PlatformResponse, Platforms
 from socialscan.util import init_checkers, init_prerequest, query
 
 BAR_WIDTH = 50
@@ -83,6 +85,9 @@ def init_parser():
         action="store_true",
         help="display profile URLs for usernames on supported platforms (profiles may not exist if usernames are reserved or belong to deleted/banned accounts)",
     )
+    parser.add_argument(
+        "--json", metavar="json.txt", help="output results in JSON format to the specified file",
+    )
     parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
     return parser
 
@@ -123,6 +128,24 @@ def pretty_print(results, *, view_value, available_only, show_urls):
     print(COLOUR_UNAVAILABLE.Primary + "Taken/Reserved, ", end="")
     print(COLOUR_INVALID.Primary + "Invalid, ", end="")
     print(COLOUR_ERROR.Primary + "Error")
+
+
+def print_json(results, *, file, available_only):
+    if available_only:
+        results = {key: [v for v in values if v.available] for key, values in results.items()}
+
+    def serialize(obj):
+        if isinstance(obj, PlatformResponse):
+            # Omit None and convert Platform objects to str
+            return asdict(
+                obj,
+                dict_factory=lambda data: dict(
+                    [(x[0], str(x[1])) for x in data if x[1] is not None]
+                ),
+            )
+
+    with open(file, "w") as f:
+        f.write(json.dumps(results, default=serialize, indent=4))
 
 
 async def main():
@@ -184,9 +207,15 @@ async def main():
                 print(
                     f"Checked {platform_response.query: ^25} on {platform_response.platform.value.__name__:<10}: {platform_response.message}"
                 )
-            results[getattr(platform_response, args.view_key)].append(platform_response)
+            results[str(getattr(platform_response, args.view_key))].append(platform_response)
 
-    pretty_print(
-        results, view_value=view_value, available_only=args.available_only, show_urls=args.show_urls
-    )
+    if args.json:
+        print_json(results, file=args.json, available_only=args.available_only)
+    else:
+        pretty_print(
+            results,
+            view_value=view_value,
+            available_only=args.available_only,
+            show_urls=args.show_urls,
+        )
     print(f"Completed {len(platform_queries)} queries in {time.time() - start_time:.2f}s")
