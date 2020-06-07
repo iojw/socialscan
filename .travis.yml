@@ -11,6 +11,7 @@ script:
 - tox --recreate
 deploy:
   provider: pypi
+  skip_existing: true
   user: iojw
   on:
     tags: true
