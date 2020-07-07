@@ -582,21 +582,17 @@ class Lastfm(PlatformChecker):
 
 class Spotify(PlatformChecker):
     URL = "https://www.spotify.com/signup/"
-    EMAIL_ENDPOINT = "https://www.spotify.com/sg-en/xhr/json/isEmailAvailable.php"
+    EMAIL_ENDPOINT = "https://spclient.wg.spotify.com/signup/public/v1/account"
 
     async def check_email(self, email):
-        async with self.get(
-            Spotify.EMAIL_ENDPOINT, params={"signup_form[email]": email, "email": email}
-        ) as r:
-            text = await r.text()
-            if text == "true":
+        async with self.get(Spotify.EMAIL_ENDPOINT, params={"validate": 1, "email": email}) as r:
+            json_body = await self.get_json(r)
+            if json_body["status"] == 1:
                 return self.response_available(email)
-            elif text == "false":
-                return self.response_unavailable(email)
+            elif json_body["status"] == 20:
+                return self.response_unavailable(email, message=json_body["errors"]["email"])
             else:
-                return self.response_failure(
-                    email, message=PlatformChecker.TOO_MANY_REQUEST_ERROR_MESSAGE
-                )
+                return self.response_failure(email, message=json_body["errors"]["email"])
 
 
 class Yahoo(PlatformChecker):
