@@ -240,7 +240,7 @@ class GitHub(PlatformChecker):
     USERNAME_LINK_FORMAT = "https://github.com/{}"
 
     token_regex = re.compile(
-        r'<auto-check src="/signup_check/username[\s\S]*value="([\S]*)"[\s\S]*<auto-check src="/signup_check/email[\s\S]*value="([\S]*)"[\s\S]*</auto-check>'
+        r'<auto-check src="/signup_check/username[\s\S]*?value="([\S]+)"[\s\S]*<auto-check src="/signup_check/email[\s\S]*?value="([\S]+)"'
     )
     tag_regex = re.compile(r"<[^>]+>")
 
@@ -251,15 +251,14 @@ class GitHub(PlatformChecker):
             if match:
                 username_token = match.group(1)
                 email_token = match.group(2)
-                return (username_token, email_token, {"_gh_sess": r.cookies["_gh_sess"]})
+                return (username_token, email_token)
 
     async def check_username(self, username):
         pr = await self.get_token()
-        (username_token, _, cookies) = pr
+        (username_token, _) = pr
         async with self.post(
             GitHub.USERNAME_ENDPOINT,
             data={"value": username, "authenticity_token": username_token},
-            cookies=cookies,
         ) as r:
             if r.status == 422:
                 text = await r.text()
@@ -282,11 +281,9 @@ class GitHub(PlatformChecker):
         if pr is None:
             return self.response_failure(email, message=PlatformChecker.TOKEN_ERROR_MESSAGE)
         else:
-            (_, email_token, cookies) = pr
+            (_, email_token) = pr
         async with self.post(
-            GitHub.EMAIL_ENDPOINT,
-            data={"value": email, "authenticity_token": email_token},
-            cookies=cookies,
+            GitHub.EMAIL_ENDPOINT, data={"value": email, "authenticity_token": email_token},
         ) as r:
             if r.status == 422:
                 text = await r.text()
