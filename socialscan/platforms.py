@@ -458,54 +458,54 @@ class Twitter(PlatformChecker):
 
 class Pastebin(PlatformChecker):
     URL = "https://pastebin.com/signup"
-    USERNAME_ENDPOINT = "https://pastebin.com/ajax/check_username.php"
-    EMAIL_ENDPOINT = "https://pastebin.com/ajax/check_email.php"
-    USERNAME_TAKEN_MSGS = ["Username not available!"]
+    ENDPOINT = "https://pastebin.com/signup"
+    USERNAME_TAKEN_MSGS = ["This username has already been taken."]
     USERNAME_LINK_FORMAT = "https://pastebin.com/u/{}"
 
-    regex = re.compile(r"^<font color=\"(red|green)\">([^<>]+)<\/font>$")
+    token_regex = re.compile(r"<meta name=\"csrf-token\" content=\"([\S]+)\">")
 
-    async def _check(self, query, endpoint, data, is_email):
-        async with self.post(endpoint, data=data) as r:
+    async def prerequest(self):
+        async with self.get(Pastebin.URL) as r:
             text = await r.text()
-            match = self.regex.match(text)
-            if not match:
-                return self.response_failure(
-                    query, message=PlatformChecker.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE
-                )
-            else:
-                message = match[2]
-                if match[1] == "green":
-                    return self.response_available(query, message=message)
-                else:
-                    if is_email:
-                        if message == "Please use a valid email address.":
-                            return self.response_invalid(query, message=message)
-                        else:
-                            return self.response_unavailable(query, message=message)
-                    else:
-                        return self.response_unavailable_or_invalid(
-                            query,
-                            message=message,
-                            unavailable_messages=Pastebin.USERNAME_TAKEN_MSGS,
-                            link=Pastebin.USERNAME_LINK_FORMAT.format(query),
-                        )
+            match = self.token_regex.search(text)
+            if match:
+                token = match.group(1)
+                return (token, r.cookies)
 
     async def check_username(self, username):
-        return await self._check(
-            username,
-            Pastebin.USERNAME_ENDPOINT,
-            data={"action": "check_username", "username": username},
-            is_email=False,
-        )
+        token, cookies = await self.get_token()
+        data = {"_csrf-frontend": token, "SignupForm[username]": username, "ajax": "js-signup-form"}
+        async with self.post(
+            Pastebin.ENDPOINT,
+            data=data,
+            cookies=cookies,
+            headers={"X-Requested-With": "XMLHttpRequest"},
+        ) as r:
+            json_body = await self.get_json(r)
+            if "signupform-username" in json_body:
+                return self.response_unavailable_or_invalid(
+                    username,
+                    message=json_body["signupform-username"][0],
+                    unavailable_messages=Pastebin.USERNAME_TAKEN_MSGS,
+                    link=Pastebin.USERNAME_LINK_FORMAT.format(username),
+                )
+            else:
+                return self.response_available(username)
 
     async def check_email(self, email):
-        return await self._check(
-            email,
-            Pastebin.EMAIL_ENDPOINT,
-            data={"action": "check_email", "username": email},
-            is_email=True,
-        )
+        token, cookies = await self.get_token()
+        data = {"_csrf-frontend": token, "SignupForm[email]": email, "ajax": "js-signup-form"}
+        async with self.post(
+            Pastebin.ENDPOINT,
+            data=data,
+            cookies=cookies,
+            headers={"X-Requested-With": "XMLHttpRequest"},
+        ) as r:
+            json_body = await self.get_json(r)
+            if "signupform-email" in json_body:
+                return self.response_unavailable(email, message=json_body["signupform-email"][0])
+            else:
+                return self.response_available(email)
 
 
 class Pinterest(PlatformChecker):
