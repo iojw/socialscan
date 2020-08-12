@@ -456,58 +456,6 @@ class Twitter(PlatformChecker):
                 return self.response_available(email, message=message)
 
 
-class Pastebin(PlatformChecker):
-    URL = "https://pastebin.com/signup"
-    ENDPOINT = "https://pastebin.com/signup"
-    USERNAME_TAKEN_MSGS = ["This username has already been taken."]
-    USERNAME_LINK_FORMAT = "https://pastebin.com/u/{}"
-
-    token_regex = re.compile(r"<meta name=\"csrf-token\" content=\"([\S]+)\">")
-
-    async def prerequest(self):
-        async with self.get(Pastebin.URL) as r:
-            text = await r.text()
-            match = self.token_regex.search(text)
-            if match:
-                token = match.group(1)
-                return (token, r.cookies)
-
-    async def check_username(self, username):
-        token, cookies = await self.get_token()
-        data = {"_csrf-frontend": token, "SignupForm[username]": username, "ajax": "js-signup-form"}
-        async with self.post(
-            Pastebin.ENDPOINT,
-            data=data,
-            cookies=cookies,
-            headers={"X-Requested-With": "XMLHttpRequest"},
-        ) as r:
-            json_body = await self.get_json(r)
-            if "signupform-username" in json_body:
-                return self.response_unavailable_or_invalid(
-                    username,
-                    message=json_body["signupform-username"][0],
-                    unavailable_messages=Pastebin.USERNAME_TAKEN_MSGS,
-                    link=Pastebin.USERNAME_LINK_FORMAT.format(username),
-                )
-            else:
-                return self.response_available(username)
-
-    async def check_email(self, email):
-        token, cookies = await self.get_token()
-        data = {"_csrf-frontend": token, "SignupForm[email]": email, "ajax": "js-signup-form"}
-        async with self.post(
-            Pastebin.ENDPOINT,
-            data=data,
-            cookies=cookies,
-            headers={"X-Requested-With": "XMLHttpRequest"},
-        ) as r:
-            json_body = await self.get_json(r)
-            if "signupform-email" in json_body:
-                return self.response_unavailable(email, message=json_body["signupform-email"][0])
-            else:
-                return self.response_available(email)
-
-
 class Pinterest(PlatformChecker):
     URL = "https://www.pinterest.com"
     EMAIL_ENDPOINT = "https://www.pinterest.com/_ngjs/resource/EmailExistsResource/get/"
@@ -659,7 +607,6 @@ class Platforms(Enum):
     GITLAB = GitLab
     INSTAGRAM = Instagram
     LASTFM = Lastfm
-    PASTEBIN = Pastebin
     PINTEREST = Pinterest
     REDDIT = Reddit
     SNAPCHAT = Snapchat
