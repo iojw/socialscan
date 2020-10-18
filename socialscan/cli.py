@@ -5,6 +5,7 @@
 import argparse
 import asyncio
 import json
+import logging
 import sys
 import time
 from collections import namedtuple, defaultdict
@@ -88,6 +89,9 @@ def init_parser():
     parser.add_argument(
         "--json", metavar="json.txt", help="output results in JSON format to the specified file",
     )
+    parser.add_argument(
+        "--debug", action="store_true", help="output debug messages",
+    )
     parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
     return parser
 
@@ -156,6 +160,8 @@ async def main():
     parser = init_parser()
     args = parser.parse_args()
 
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
     queries = args.queries
     if args.input:
         with open(args.input, "r") as f:
@@ -194,7 +200,7 @@ async def main():
         for future in tqdm.tqdm(
             asyncio.as_completed(platform_queries),
             total=len(platform_queries),
-            disable=args.verbose,
+            disable=args.verbose or args.debug,
             leave=False,
             ncols=BAR_WIDTH,
             bar_format=BAR_FORMAT,

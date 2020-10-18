@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import re
+import logging
 from dataclasses import dataclass
 from enum import Enum
 
@@ -113,9 +114,11 @@ class PlatformChecker:
         return self.session.request(method, url, timeout=self.client_timeout, proxy=proxy, **kwargs)
 
     def post(self, url, **kwargs):
+        logging.debug(f"Queried {url} with POST")
         return self._request("POST", url, **kwargs)
 
     def get(self, url, **kwargs):
+        logging.debug(f"Queried {url} with GET")
         return self._request("GET", url, **kwargs)
 
     @staticmethod
@@ -127,7 +130,15 @@ class PlatformChecker:
                 )
             )
         else:
-            return await request.json()
+            json = await request.json()
+            logging.debug(f"Parsed JSON from {request.url} with status {request.status}: {json}")
+            return json
+
+    @staticmethod
+    async def get_text(request):
+        text = await request.text()
+        logging.debug(f"Retrieved text from {request.url} with status {request.status}: {text}")
+        return text
 
     def __init__(self, session, proxy_list=[]):
         self.session = session
@@ -246,7 +257,7 @@ class GitHub(PlatformChecker):
 
     async def prerequest(self):
         async with self.get(GitHub.URL) as r:
-            text = await r.text()
+            text = await self.get_text(r)
             match = self.token_regex.search(text)
             if match:
                 username_token = match.group(1)
@@ -261,7 +272,7 @@ class GitHub(PlatformChecker):
             data={"value": username, "authenticity_token": username_token},
         ) as r:
             if r.status == 422:
-                text = await r.text()
+                text = await self.get_text(r)
                 text = self.tag_regex.sub("", text).strip()
                 return self.response_unavailable_or_invalid(
                     username,
@@ -286,7 +297,7 @@ class GitHub(PlatformChecker):
             GitHub.EMAIL_ENDPOINT, data={"value": email, "authenticity_token": email_token},
         ) as r:
             if r.status == 422:
-                text = await r.text()
+                text = await self.get_text(r)
                 return self.response_unavailable(email, message=text)
             elif r.status == 200:
                 return self.response_available(email)
@@ -312,7 +323,7 @@ class Tumblr(PlatformChecker):
 
     async def prerequest(self):
         async with self.get(Tumblr.URL) as r:
-            text = await r.text()
+            text = await self.get_text(r)
             match = re.search(
                 r'<meta name="tumblr-form-key" id="tumblr_form_key" content="([^\s]*)">', text
             )

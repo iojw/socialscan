@@ -1,4 +1,5 @@
 import pytest
+import logging
 
 from socialscan.util import sync_execute_queries
 from socialscan.platforms import Platforms, PlatformResponse
@@ -11,6 +12,8 @@ INVALID_USERNAMES = ["*"]
 
 UNUSED_EMAILS = ["unused@notanemail.com"]
 USED_EMAILS = ["a@gmail.com"]
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def assert_available(response: PlatformResponse):
