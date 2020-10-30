@@ -50,6 +50,7 @@ class PlatformChecker:
             self.prerequest_sent = True
             if self.token is None:
                 raise QueryError(PlatformChecker.TOKEN_ERROR_MESSAGE)
+            logging.debug(f"TOKEN {Platforms(self.__class__)}: {self.token}")
             return self.token
 
     def response_failure(self, query, *, message="Failure"):
@@ -114,11 +115,11 @@ class PlatformChecker:
         return self.session.request(method, url, timeout=self.client_timeout, proxy=proxy, **kwargs)
 
     def post(self, url, **kwargs):
-        logging.debug(f"Queried {url} with POST")
+        logging.debug(f"POST {url}")
         return self._request("POST", url, **kwargs)
 
     def get(self, url, **kwargs):
-        logging.debug(f"Queried {url} with GET")
+        logging.debug(f"GET {url}")
         return self._request("GET", url, **kwargs)
 
     @staticmethod
@@ -131,13 +132,13 @@ class PlatformChecker:
             )
         else:
             json = await request.json()
-            logging.debug(f"Parsed JSON from {request.url} with status {request.status}: {json}")
+            logging.debug(f"JSON {request.url} {request.status}: {json}")
             return json
 
     @staticmethod
     async def get_text(request):
         text = await request.text()
-        logging.debug(f"Retrieved text from {request.url} with status {request.status}: {text}")
+        logging.debug(f"TEXT {request.url} {request.status}: {text}")
         return text
 
     def __init__(self, session, proxy_list=[]):
