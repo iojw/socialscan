@@ -1,0 +1,13 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: weekly
+    time: "21:00"
+  open-pull-requests-limit: 10
+  assignees:
+  - iojw
+  allow:
+  - dependency-type: direct
+  - dependency-type: indirect
