@@ -56,7 +56,7 @@ socialscan aims to plug these gaps by directly querying the registration servers
 
 ### pip
 ```
-> pip install socialscan
+> pip3 install socialscan
 ```
 
 ### Install from source
