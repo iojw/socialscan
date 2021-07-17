@@ -1,6 +1,5 @@
 import pytest
 import logging
-import os
 
 from socialscan.util import sync_execute_queries
 from socialscan.platforms import Platforms, PlatformResponse
@@ -51,18 +50,7 @@ def test_usernames(platform, usernames, assert_function):
         assert_function(response)
 
 
-@pytest.mark.parametrize(
-    "platform",
-    [p for p in Platforms if hasattr(p.value, "check_email") and p != Platforms.SPOTIFY]
-    + [
-        pytest.param(
-            Platforms.SPOTIFY,
-            marks=pytest.mark.xfail(
-                "TRAVIS" in os.environ, reason="known issue with Travis CI", strict=True
-            ),
-        )
-    ],
-)
+@pytest.mark.parametrize("platform", [p for p in Platforms if hasattr(p.value, "check_email")])
 @pytest.mark.parametrize(
     "emails, assert_function",
     [(UNUSED_EMAILS, assert_available), (USED_EMAILS, assert_unavailable)],
