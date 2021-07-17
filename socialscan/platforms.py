@@ -554,17 +554,24 @@ class Yahoo(PlatformChecker):
 
     # Modified from Yahoo source
     error_messages = {
-        "IDENTIFIER_EXISTS": "A Yahoo account already exists with this username.",
-        "RESERVED_WORD_PRESENT": "A reserved word is present in the username",
-        "FIELD_EMPTY": "This is required.",
-        "SOME_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can only use letters, numbers, full stops (‘.’) and underscores (‘_’) in your username",
-        "CANNOT_END_WITH_SPECIAL_CHARACTER": "Your username has to end with a letter or a number",
+        "IDENTIFIER_EXISTS": "A Yahoo account already exists with this email address. REPLACE_SIGNIN_LINK.",
+        "DANGLING_IDENTIFIER_EXISTS": "A Yahoo account already exists with this email address.",
+        "IDENTIFIER_NOT_AVAILABLE": "This email address is not available for sign up, try something else",
+        "EMAIL_DOMAIN_NOT_ALLOWED": "You cannot use this email address. Instead try creating Yahoo email address",
+        "RESERVED_WORD_PRESENT": "A Yahoo account already exists with this email address.",
+        "SOME_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can only use letters, numbers, periods (‘.’), and underscores (‘_’) in your username.",
+        "SOME_SPECIAL_CHARACTERS_NOT_ALLOWED_IN_EMAIL": "Make sure you use your full email address, including an “@” sign and a domain.",
+        "INVALID_IDENTIFIER": "Error: Invalid identifier.",
+        "CANNOT_END_WITH_SPECIAL_CHARACTER": "Your username has to end with a letter or a number.",
         "CANNOT_HAVE_MORE_THAN_ONE_PERIOD": "You can’t have more than one ‘.’ in your username.",
-        "NEED_AT_LEAST_ONE_ALPHA": "Please use at least one letter in your username",
-        "CANNOT_START_WITH_SPECIAL_CHARACTER_OR_NUMBER": "Your username has to start with a letter",
+        "NEED_AT_LEAST_ONE_ALPHA": "Please use at least one letter in your username.",
+        "CANNOT_START_WITH_SPECIAL_CHARACTER_OR_NUMBER": "Your username has to start with a letter.",
         "CONSECUTIVE_SPECIAL_CHARACTERS_NOT_ALLOWED": "You can’t have more than one ‘.’ or ‘_’ in a row.",
-        "LENGTH_TOO_SHORT": "That username is too short, please use a longer one.",
-        "LENGTH_TOO_LONG": "That username is too long, please use a shorter one.",
+        "INVALID_NAME_LENGTH": "That name is too long.",
+        "LENGTH_TOO_SHORT": "That email address is too short, please use a longer one.",
+        "LENGTH_TOO_LONG": "That email address is too long, please use a shorter one.",
+        "NAME_CONTAINS_URL": "You can't use this name",
+        "ELECTION_SPECIFIC_WORD_PRESENT": "Not available, try something else.",
     }
 
     regex = re.compile(r"v=1&s=([^\s]*)")
@@ -589,7 +596,12 @@ class Yahoo(PlatformChecker):
             else:
                 error = json_body["errors"][2]["error"]
                 error_pretty = self.error_messages.get(error, error.replace("_", " ").capitalize())
-                if error == "IDENTIFIER_EXISTS" or error == "RESERVED_WORD_PRESENT":
+                if error in (
+                    "IDENTIFIER_EXISTS",
+                    "RESERVED_WORD_PRESENT",
+                    "IDENTIFIER_NOT_AVAILABLE",
+                    "DANGLING_IDENTIFIER_EXISTS",
+                ):
                     return self.response_unavailable(username, message=error_pretty)
                 else:
                     return self.response_invalid(username, message=error_pretty)
