@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+socialscan = {editable = true, path = "."}
+
+[dev-packages]
+tox = "*"
+flake8 = "*"
+black = "==21.7b0"
+pytest = "*"
+
+[requires]
+python_version = "3.9"
