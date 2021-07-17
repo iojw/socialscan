@@ -295,7 +295,8 @@ class GitHub(PlatformChecker):
         else:
             (_, email_token) = pr
         async with self.post(
-            GitHub.EMAIL_ENDPOINT, data={"value": email, "authenticity_token": email_token},
+            GitHub.EMAIL_ENDPOINT,
+            data={"value": email, "authenticity_token": email_token},
         ) as r:
             if r.status == 422:
                 text = await self.get_text(r)

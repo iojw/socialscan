@@ -87,10 +87,14 @@ def init_parser():
         help="display profile URLs for usernames on supported platforms (profiles may not exist if usernames are reserved or belong to deleted/banned accounts)",
     )
     parser.add_argument(
-        "--json", metavar="json.txt", help="output results in JSON format to the specified file",
+        "--json",
+        metavar="json.txt",
+        help="output results in JSON format to the specified file",
     )
     parser.add_argument(
-        "--debug", action="store_true", help="output debug messages",
+        "--debug",
+        action="store_true",
+        help="output debug messages",
     )
     parser.add_argument("--version", version=f"%(prog)s {__version__}", action="version")
     return parser
