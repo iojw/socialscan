@@ -310,12 +310,7 @@ class GitHub(PlatformChecker):
 
 class Tumblr(PlatformChecker):
     URL = "https://tumblr.com/register"
-    ENDPOINT = "https://www.tumblr.com/svc/account/register"
-    USERNAME_TAKEN_MSGS = [
-        "That's a good one, but it's taken",
-        "Someone beat you to that username",
-        "Try something else, that one is spoken for",
-    ]
+    ENDPOINT = "https://www.tumblr.com/api/v2/register/account/validate"
     USERNAME_LINK_FORMAT = "https://{}.tumblr.com"
 
     SAMPLE_UNUSED_EMAIL = "akc2rW33AuSqQWY8@gmail.com"
@@ -325,9 +320,7 @@ class Tumblr(PlatformChecker):
     async def prerequest(self):
         async with self.get(Tumblr.URL) as r:
             text = await self.get_text(r)
-            match = re.search(
-                r'<meta name="tumblr-form-key" id="tumblr_form_key" content="([^\s]*)">', text
-            )
+            match = re.search(r'"API_TOKEN":"([\s\S]+?)"', text)
             if match:
                 token = match.group(1)
                 return token
@@ -337,32 +330,35 @@ class Tumblr(PlatformChecker):
         token = await self.get_token()
         async with self.post(
             Tumblr.ENDPOINT,
-            data={
-                "action": "signup_account",
-                "form_key": token,
-                "user[email]": email,
-                "user[password]": Tumblr.SAMPLE_PASSWORD,
-                "tumblelog[name]": username,
+            json={
+                "email": email,
+                "tumblelog": username,
+                "password": Tumblr.SAMPLE_PASSWORD,
+            },
+            headers={
+                "authorization": f"Bearer {token}",
             },
         ) as r:
             json_body = await self.get_json(r)
-            if username == query:
-                if "usernames" in json_body or len(json_body["errors"]) > 0:
-                    return self.response_unavailable_or_invalid(
-                        query,
-                        message=json_body["errors"][0],
-                        unavailable_messages=Tumblr.USERNAME_TAKEN_MSGS,
+            if "error" in json_body["response"] and "code" in json_body["response"]:
+                if json_body["response"]["code"] == 3 and username == query:
+                    return self.response_unavailable(
+                        username,
+                        message=json_body["response"]["error"],
                         link=Tumblr.USERNAME_LINK_FORMAT.format(query),
                     )
-                elif json_body["errors"] == []:
-                    return self.response_available(query)
-            elif email == query:
-                if "This email address is already in use." in json_body["errors"]:
-                    return self.response_unavailable(query, message=json_body["errors"][0],)
-                elif "This email address isn't correct. Please try again." in json_body["errors"]:
-                    return self.response_invalid(query, message=json_body["errors"][0])
-                elif json_body["errors"] == []:
-                    return self.response_available(query)
+                elif json_body["response"]["code"] == 2 and email == query:
+                    return self.response_unavailable(
+                        email,
+                        message=json_body["response"]["error"],
+                        link=Tumblr.USERNAME_LINK_FORMAT.format(query),
+                    )
+                else:
+                    return self.response_invalid(query, message=json_body["response"]["error"])
+            elif json_body["meta"]["status"] == 200:
+                return self.response_available(query)
+            else:
+                return self.response_failure(query, message="Unknown response")
 
     async def check_username(self, username):
         return await self._check(username=username)
