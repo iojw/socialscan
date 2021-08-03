@@ -1,5 +1,7 @@
 {
   "extends": [
-    "config:base"
+    "config:base",
+    "group:allNonMajor",
+    "schedule:monthly"
   ]
 }
