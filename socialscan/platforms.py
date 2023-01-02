@@ -178,13 +178,13 @@ class Snapchat(PlatformChecker):
         ) as r:
             # Non-JSON received if too many requests
             json_body = await self.get_json(r)
-            if "error_message" in json_body["reference"]:
+            if "error_message" in json_body["value"]:
                 return self.response_unavailable_or_invalid(
                     username,
-                    message=json_body["reference"]["error_message"],
+                    message=json_body["value"]["error_message"],
                     unavailable_messages=Snapchat.USERNAME_TAKEN_MSGS,
                 )
-            elif json_body["reference"]["status_code"] == "OK":
+            elif json_body["value"]["status_code"] == "OK":
                 return self.response_available(username)
 
     # Email: Snapchat doesn't associate email addresses with accounts
