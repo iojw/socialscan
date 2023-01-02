@@ -191,7 +191,7 @@ class Snapchat(PlatformChecker):
 
 
 class Instagram(PlatformChecker):
-    URL = "https://instagram.com"
+    URL = "https://www.instagram.com/api/v1/public/landing_info/"
     ENDPOINT = "https://www.instagram.com/accounts/web_create_ajax/attempt/"
     USERNAME_TAKEN_MSGS = [
         "This username isn't available.",
