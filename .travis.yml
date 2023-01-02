@@ -1,9 +1,7 @@
 language: python
 dist: xenial
 python:
-- '3.6'
-- '3.7'
-- '3.8'
+- '3.9'
 install:
 - python setup.py install
 - pip install tox-travis
