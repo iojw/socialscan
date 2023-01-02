@@ -33,7 +33,6 @@ The following platforms are currently supported:
 | Reddit    |     ✔️    |        |
 |  Yahoo    |     ✔️    |        |
 | Pinterest |            |   ✔️  |
-|  Spotify  |            |   ✔️  |
 |  Firefox  |            |   ✔️  |
 
 ![](https://github.com/iojw/socialscan/raw/master/demo/demo.gif)

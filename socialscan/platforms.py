@@ -534,21 +534,6 @@ class Lastfm(PlatformChecker):
         return await self._check(username=username)
 
 
-class Spotify(PlatformChecker):
-    URL = "https://www.spotify.com/signup/"
-    EMAIL_ENDPOINT = "https://spclient.wg.spotify.com/signup/public/v1/account"
-
-    async def check_email(self, email):
-        async with self.get(Spotify.EMAIL_ENDPOINT, params={"validate": 1, "email": email}) as r:
-            json_body = await self.get_json(r)
-            if json_body["status"] == 1:
-                return self.response_available(email)
-            elif json_body["status"] == 20:
-                return self.response_unavailable(email, message=json_body["errors"]["email"])
-            else:
-                return self.response_failure(email, message=json_body["errors"]["email"])
-
-
 class Yahoo(PlatformChecker):
     URL = "https://login.yahoo.com/account/create"
     USERNAME_ENDPOINT = "https://login.yahoo.com/account/module/create?validateField=yid"
@@ -631,7 +616,6 @@ class Platforms(Enum):
     PINTEREST = Pinterest
     REDDIT = Reddit
     SNAPCHAT = Snapchat
-    SPOTIFY = Spotify
     TWITTER = Twitter
     TUMBLR = Tumblr
     YAHOO = Yahoo
