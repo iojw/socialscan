@@ -8,7 +8,9 @@ import sys
 
 import aiohttp
 
-from socialscan.platforms import PlatformResponse, Platforms, QueryError
+from socialscan.platforms import (EmailQueryable, PlatformResponse, Platforms,
+                                  PrerequestRequired, QueryError,
+                                  UsernameQueryable)
 
 EMAIL_REGEX = re.compile(
     r"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?)+$"
@@ -16,7 +18,7 @@ EMAIL_REGEX = re.compile(
 
 
 async def init_prerequest(platform, checkers):
-    if hasattr(platform.value, "prerequest"):
+    if issubclass(platform.value, PrerequestRequired):
         await checkers[platform].get_token()
 
 
@@ -30,12 +32,12 @@ def init_checkers(session, platforms=list(Platforms), proxy_list=[]):
 async def query(query_, platform, checkers):
     try:
         is_email = EMAIL_REGEX.match(query_)
-        if is_email and hasattr(platform.value, "check_email"):
+        if is_email and issubclass(platform.value, EmailQueryable):
             response = await checkers[platform].check_email(query_)
             if response is None:
                 raise QueryError("Error retrieving result")
             return response
-        elif not is_email and hasattr(platform.value, "check_username"):
+        elif not is_email and issubclass(platform.value, UsernameQueryable):
             response = await checkers[platform].check_username(query_)
             if response is None:
                 raise QueryError("Error retrieving result")

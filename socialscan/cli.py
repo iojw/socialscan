@@ -8,7 +8,7 @@ import json
 import logging
 import sys
 import time
-from collections import namedtuple, defaultdict
+from collections import defaultdict, namedtuple
 from dataclasses import asdict
 from operator import attrgetter
 

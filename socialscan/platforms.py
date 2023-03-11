@@ -2,8 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import re
+import abc
 import logging
+import re
 from dataclasses import dataclass
 from enum import Enum
 
@@ -16,22 +17,30 @@ class QueryError(Exception):
     pass
 
 
-class PlatformChecker:
-    DEFAULT_HEADERS = {
-        "User-agent": f"socialscan {__version__}",
-        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
-    }
-    UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Unexpected content type {}. You might be sending too many requests. Use a proxy or wait before trying again."
-    TOKEN_ERROR_MESSAGE = "Could not retrieve token. You might be sending too many requests. Use a proxy or wait before trying again."
-    TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Use a proxy or wait before trying again."
-    TIMEOUT_DURATION = 15
+class UsernameQueryable(metaclass=abc.ABCMeta):
+    """Abstract class for platforms that can query usernames."""
 
-    client_timeout = aiohttp.ClientTimeout(connect=TIMEOUT_DURATION)
+    @abc.abstractmethod
+    async def check_username(self, username):
+        raise NotImplementedError
 
-    # Subclasses can implement 3 methods depending on requirements: prerequest(), check_username() and check_email()
-    # 1: Be as explicit as possible in handling all cases
-    # 2: Do not include any queries that will lead to side-effects on users (e.g. submitting sign up forms)
-    # OK to omit checks for whether a key exists when parsing the JSON response. KeyError is handled by the parent coroutine.
+
+class EmailQueryable(metaclass=abc.ABCMeta):
+    """Abstract class for platforms that can query email addresses."""
+
+    @abc.abstractmethod
+    async def check_email(self, email):
+        raise NotImplementedError
+
+
+class PrerequestRequired(metaclass=abc.ABCMeta):
+    """Abstract class for platforms that require a pre-request to retrieve a token,
+    for use in the main query. This request is sent once and cached for future
+    queries."""
+
+    @abc.abstractmethod
+    async def prerequest(self):
+        raise NotImplementedError
 
     async def get_token(self):
         """
@@ -43,15 +52,32 @@ class PlatformChecker:
         """
         if self.prerequest_sent:
             if self.token is None:
-                raise QueryError(PlatformChecker.TOKEN_ERROR_MESSAGE)
+                raise QueryError(BasePlatform.TOKEN_ERROR_MESSAGE)
             return self.token
         else:
             self.token = await self.prerequest()
             self.prerequest_sent = True
             if self.token is None:
-                raise QueryError(PlatformChecker.TOKEN_ERROR_MESSAGE)
+                raise QueryError(BasePlatform.TOKEN_ERROR_MESSAGE)
             logging.debug(f"TOKEN {Platforms(self.__class__)}: {self.token}")
             return self.token
+
+
+class BasePlatform:
+    DEFAULT_HEADERS = {
+        "User-agent": f"socialscan {__version__}",
+        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+    }
+    UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Unexpected content type {}. You might be sending too many requests. Use a proxy or wait before trying again."
+    TOKEN_ERROR_MESSAGE = "Could not retrieve token. You might be sending too many requests. Use a proxy or wait before trying again."
+    TOO_MANY_REQUEST_ERROR_MESSAGE = "Requests denied by platform due to excessive requests. Use a proxy or wait before trying again."
+    TIMEOUT_DURATION = 15
+
+    client_timeout = aiohttp.ClientTimeout(connect=TIMEOUT_DURATION)
+
+    # 1: Be as explicit as possible in handling all cases
+    # 2: Do not include any queries that will lead to side-effects on users (e.g. submitting sign up forms)
+    # OK to omit checks for whether a key exists when parsing the JSON response. KeyError is handled by the parent coroutine.
 
     def response_failure(self, query, *, message="Failure"):
         return PlatformResponse(
@@ -109,9 +135,9 @@ class PlatformChecker:
         )
         self.request_count += 1
         if "headers" in kwargs:
-            kwargs["headers"].update(PlatformChecker.DEFAULT_HEADERS)
+            kwargs["headers"].update(BasePlatform.DEFAULT_HEADERS)
         else:
-            kwargs["headers"] = PlatformChecker.DEFAULT_HEADERS
+            kwargs["headers"] = BasePlatform.DEFAULT_HEADERS
         return self.session.request(method, url, timeout=self.client_timeout, proxy=proxy, **kwargs)
 
     def post(self, url, **kwargs):
@@ -126,7 +152,7 @@ class PlatformChecker:
     async def get_json(request):
         if not request.headers["Content-Type"].startswith("application/json"):
             raise QueryError(
-                PlatformChecker.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE.format(
+                BasePlatform.UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE.format(
                     request.headers["Content-Type"]
                 )
             )
@@ -149,7 +175,7 @@ class PlatformChecker:
         self.token = None
 
 
-class Snapchat(PlatformChecker):
+class Snapchat(BasePlatform, UsernameQueryable, PrerequestRequired):
     URL = "https://accounts.snapchat.com/accounts/login"
     ENDPOINT = "https://accounts.snapchat.com/accounts/get_username_suggestions"
     USERNAME_TAKEN_MSGS = ["is already taken", "is currently unavailable"]
@@ -190,7 +216,7 @@ class Snapchat(PlatformChecker):
     # Email: Snapchat doesn't associate email addresses with accounts
 
 
-class Instagram(PlatformChecker):
+class Instagram(BasePlatform, UsernameQueryable, EmailQueryable, PrerequestRequired):
     URL = "https://www.instagram.com/api/v1/public/landing_info/"
     ENDPOINT = "https://www.instagram.com/accounts/web_create_ajax/attempt/"
     USERNAME_TAKEN_MSGS = [
@@ -243,7 +269,7 @@ class Instagram(PlatformChecker):
                     return self.response_unavailable(email, message=message)
 
 
-class GitHub(PlatformChecker):
+class GitHub(BasePlatform, UsernameQueryable, EmailQueryable, PrerequestRequired):
     URL = "https://github.com/join"
     USERNAME_ENDPOINT = "https://github.com/signup_check/username"
     EMAIL_ENDPOINT = "https://github.com/signup_check/email"
@@ -285,13 +311,13 @@ class GitHub(PlatformChecker):
                 return self.response_available(username)
             elif r.status == 429:
                 return self.response_failure(
-                    username, message=PlatformChecker.TOO_MANY_REQUEST_ERROR_MESSAGE
+                    username, message=BasePlatform.TOO_MANY_REQUEST_ERROR_MESSAGE
                 )
 
     async def check_email(self, email):
         pr = await self.get_token()
         if pr is None:
-            return self.response_failure(email, message=PlatformChecker.TOKEN_ERROR_MESSAGE)
+            return self.response_failure(email, message=BasePlatform.TOKEN_ERROR_MESSAGE)
         else:
             (_, email_token) = pr
         async with self.post(
@@ -305,11 +331,11 @@ class GitHub(PlatformChecker):
                 return self.response_available(email)
             elif r.status == 429:
                 return self.response_failure(
-                    email, message=PlatformChecker.TOO_MANY_REQUEST_ERROR_MESSAGE
+                    email, message=BasePlatform.TOO_MANY_REQUEST_ERROR_MESSAGE
                 )
 
 
-class Tumblr(PlatformChecker):
+class Tumblr(BasePlatform, UsernameQueryable, EmailQueryable, PrerequestRequired):
     URL = "https://tumblr.com/register"
     ENDPOINT = "https://www.tumblr.com/api/v2/register/account/validate"
     USERNAME_LINK_FORMAT = "https://{}.tumblr.com"
@@ -368,7 +394,7 @@ class Tumblr(PlatformChecker):
         return await self._check(email=email)
 
 
-class GitLab(PlatformChecker):
+class GitLab(BasePlatform, UsernameQueryable):
     URL = "https://gitlab.com/users/sign_in"
     ENDPOINT = "https://gitlab.com/users/{}/exists"
     USERNAME_LINK_FORMAT = "https://gitlab.com/{}"
@@ -400,7 +426,7 @@ class GitLab(PlatformChecker):
     # Email: GitLab requires a reCAPTCHA token to check email address usage which we cannot bypass
 
 
-class Reddit(PlatformChecker):
+class Reddit(BasePlatform, UsernameQueryable):
     URL = "https://reddit.com"
     ENDPOINT = "https://www.reddit.com/api/check_username.json"
     USERNAME_TAKEN_MSGS = [
@@ -415,7 +441,7 @@ class Reddit(PlatformChecker):
             json_body = await self.get_json(r)
             if "error" in json_body and json_body["error"] == 429:
                 return self.response_failure(
-                    username, message=PlatformChecker.TOO_MANY_REQUEST_ERROR_MESSAGE
+                    username, message=BasePlatform.TOO_MANY_REQUEST_ERROR_MESSAGE
                 )
             elif "json" in json_body:
                 return self.response_unavailable_or_invalid(
@@ -430,7 +456,7 @@ class Reddit(PlatformChecker):
     # Email: You can register multiple Reddit accounts under the same email address so not possible to check if an address is in use
 
 
-class Twitter(PlatformChecker):
+class Twitter(BasePlatform, UsernameQueryable, EmailQueryable):
     URL = "https://twitter.com/signup"
     USERNAME_ENDPOINT = "https://api.twitter.com/i/users/username_available.json"
     EMAIL_ENDPOINT = "https://api.twitter.com/i/users/email_available.json"
@@ -465,7 +491,7 @@ class Twitter(PlatformChecker):
                 return self.response_available(email, message=message)
 
 
-class Pinterest(PlatformChecker):
+class Pinterest(BasePlatform, EmailQueryable):
     URL = "https://www.pinterest.com"
     EMAIL_ENDPOINT = "https://www.pinterest.com/_ngjs/resource/EmailExistsResource/get/"
 
@@ -482,7 +508,7 @@ class Pinterest(PlatformChecker):
                 return self.response_available(email)
 
 
-class Lastfm(PlatformChecker):
+class Lastfm(BasePlatform, UsernameQueryable, EmailQueryable, PrerequestRequired):
     URL = "https://www.last.fm/join"
     ENDPOINT = "https://www.last.fm/join/partial/validate"
     USERNAME_TAKEN_MSGS = ["Sorry, this username isn't available."]
@@ -534,7 +560,7 @@ class Lastfm(PlatformChecker):
         return await self._check(username=username)
 
 
-class Yahoo(PlatformChecker):
+class Yahoo(BasePlatform, UsernameQueryable, PrerequestRequired):
     URL = "https://login.yahoo.com/account/create"
     USERNAME_ENDPOINT = "https://login.yahoo.com/account/module/create?validateField=yid"
 
@@ -593,7 +619,7 @@ class Yahoo(PlatformChecker):
                     return self.response_invalid(username, message=error_pretty)
 
 
-class Firefox(PlatformChecker):
+class Firefox(BasePlatform, EmailQueryable):
     URL = "https://accounts.firefox.com/signup"
     EMAIL_ENDPOINT = "https://api.accounts.firefox.com/v1/account/status"
 
@@ -612,13 +638,10 @@ class Platforms(Enum):
     GITHUB = GitHub
     GITLAB = GitLab
     INSTAGRAM = Instagram
-    LASTFM = Lastfm
     PINTEREST = Pinterest
     REDDIT = Reddit
-    SNAPCHAT = Snapchat
     TWITTER = Twitter
     TUMBLR = Tumblr
-    YAHOO = Yahoo
     FIREFOX = Firefox
 
     def __str__(self):
