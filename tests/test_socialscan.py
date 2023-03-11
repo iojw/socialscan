@@ -1,8 +1,9 @@
-import pytest
 import logging
 
+import pytest
+
+from socialscan.platforms import PlatformResponse, Platforms
 from socialscan.util import sync_execute_queries
-from socialscan.platforms import Platforms, PlatformResponse
 
 TIMEOUT_DURATION = 25  # in seconds
 
@@ -11,7 +12,7 @@ UNAVAILABLE_USERNAMES = ["social"]
 INVALID_USERNAMES = ["*"]
 
 UNUSED_EMAILS = ["unused@notanemail.com"]
-USED_EMAILS = ["a@gmail.com"]
+USED_EMAILS = ["fire@gmail.com"]
 
 logging.basicConfig(level=logging.DEBUG)
 
