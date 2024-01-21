@@ -64,8 +64,10 @@ class PrerequestRequired(metaclass=abc.ABCMeta):
 
 
 class BasePlatform:
+    # Default user agent taken from `odeialba/instagram-php-scraper`
+    # https://github.com/odeialba/instagram-php-scraper/blob/39e8565e8446fa2c66dbcdee8807aa03fca2bbda/src/InstagramScraper/Instagram.php#L46
     DEFAULT_HEADERS = {
-        "User-agent": f"socialscan {__version__}",
+        "User-agent": "Mozilla/5.0 (Linux; Android 8.1.0; motorola one Build/OPKS28.63-18-3; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/70.0.3538.80 Mobile Safari/537.36 Instagram 72.0.0.21.98 Android (27/8.1.0; 320dpi; 720x1362; motorola; motorola one; deen_sprout; qcom; pt_BR; 132081645)",
         "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
     }
     UNEXPECTED_CONTENT_TYPE_ERROR_MESSAGE = "Unexpected content type {}. You might be sending too many requests. Use a proxy or wait before trying again."
