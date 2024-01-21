@@ -71,7 +71,7 @@ def init_parser():
         help="cache tokens for platforms requiring more than one HTTP request (Snapchat, GitHub, Instagram. Lastfm, Tumblr & Yahoo), reducing total number of requests sent",
     )
     parser.add_argument(
-        "--input", "-i", metavar="input.txt", help="file containg list of queries to execute"
+        "--input", "-i", metavar="input.txt", help="file containing list of queries to execute"
     )
     parser.add_argument(
         "--proxy-list",

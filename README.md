@@ -82,7 +82,7 @@ optional arguments:
                         HTTP request (Snapchat, GitHub, Instagram. Lastfm &
                         Tumblr), reducing total number of requests sent
   --input input.txt, -i input.txt
-                        file containg list of queries to execute
+                        file containing list of queries to execute
   --proxy-list proxy_list.txt
                         file containing list of HTTP proxy servers to execute
                         queries with
