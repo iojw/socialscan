@@ -52,6 +52,13 @@ def init_parser():
         help="list of platforms to query " "(default: all platforms)",
     )
     parser.add_argument(
+        "--exclude",
+        "-e",
+        metavar="exclude",
+        nargs="*",
+        help="list of platforms to exclude " "(default: no platforms)",
+    )
+    parser.add_argument(
         "--view-by",
         dest="view_key",
         choices=["platform", "query"],
@@ -183,6 +190,16 @@ async def main():
                 raise ValueError(p + " is not a valid platform")
     else:
         platforms = [p for p in Platforms]
+
+    if args.exclude:
+        for e in args.exclude:
+            if e.upper() in Platforms.__members__:
+                platform_found = Platforms[e.upper()]
+                if platform_found in platforms:
+                    platforms.remove(platform_found);
+            else:
+                raise ValueError(e + " is not a valid platform")
+
     proxy_list = []
     if args.proxy_list:
         with open(args.proxy_list, "r") as f:
