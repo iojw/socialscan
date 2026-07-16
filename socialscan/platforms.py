@@ -10,8 +10,6 @@ from enum import Enum
 
 import aiohttp
 
-from socialscan import __version__
-
 
 class QueryError(Exception):
     pass
