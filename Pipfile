@@ -9,7 +9,7 @@ socialscan = {editable = true, path = "."}
 [dev-packages]
 tox = "*"
 flake8 = "*"
-black = "==23.12.1"
+black = "==24.3.0"
 pytest = "*"
 
 [requires]
