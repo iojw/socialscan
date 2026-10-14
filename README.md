@@ -65,6 +65,15 @@ socialscan aims to plug these gaps by directly querying the registration servers
 > pip install .
 ```
 
+### OTinstaller
+On Linux, [OTinstaller](https://github.com/OSINTVerseHQ/OTinstaller), a third-party tool manager, can install the PyPI release into its own virtualenv; it saves each run's output under `./results/`. It isn't maintained by the socialscan authors, so please report problems with it [on the OTinstaller tracker](https://github.com/OSINTVerseHQ/OTinstaller/issues).
+```
+> pipx install otinstaller
+> otinstaller init
+> otinstaller install socialscan
+> otinstaller run socialscan -- username1 email2@gmail.com   # same as: socialscan username1 email2@gmail.com
+```
+
 ## Usage
 ```
 usage: socialscan [list of usernames/email addresses to check]
