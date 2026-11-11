@@ -168,9 +168,12 @@ async def main():
         logging.basicConfig(level=logging.DEBUG)
     queries = args.queries
     if args.input:
-        with open(args.input, "r") as f:
-            for line in f:
-                queries.append(line.strip("\n"))
+        try:
+            with open(args.input, "r") as f:
+                for line in f:
+                    queries.append(line.strip("\n"))
+        except OSError as e:
+            parser.error(f"cannot read input file {args.input!r}: {e.strerror or e}")
     if not args.queries:
         raise ValueError("You must specify either at least one query or an input file")
     queries = list(dict.fromkeys(queries))
